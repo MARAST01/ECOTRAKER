@@ -29,8 +29,9 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun RegisterScreen(onBack: () -> Unit) {
     var fullName by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -54,6 +55,15 @@ fun RegisterScreen(onBack: () -> Unit) {
 
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
+            value = phone,
+            onValueChange = { phone = it },
+            label = { Text("Número de celular") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
             value = email,
             onValueChange = { email = it },
             label = { Text("Correo electrónico") },
@@ -63,11 +73,12 @@ fun RegisterScreen(onBack: () -> Unit) {
 
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
-            value = phone,
-            onValueChange = { phone = it },
-            label = { Text("Número de celular") },
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Contraseña") },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            singleLine = true,
+            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
         )
 
         Spacer(Modifier.height(24.dp))
