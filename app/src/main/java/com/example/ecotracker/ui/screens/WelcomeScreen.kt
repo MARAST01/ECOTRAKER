@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun WelcomeScreen(
     onCreateAccount: () -> Unit,
+    onLogin: () -> Unit
 ) {
     Surface(color = MaterialTheme.colorScheme.background) {
         Column(
@@ -53,10 +54,10 @@ fun WelcomeScreen(
             Spacer(Modifier.height(12.dp))
 
             Button(
-                onClick = { /* Botón deshabilitado - no hace nada */ },
+                onClick = onLogin,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                enabled = false
+                enabled = true
             ) {
                 Text("Iniciar sesión", color = MaterialTheme.colorScheme.onPrimary)
             }

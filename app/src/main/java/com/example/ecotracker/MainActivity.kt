@@ -14,6 +14,8 @@ import com.example.ecotracker.ui.theme.ECOTRACKERTheme
 import com.example.ecotracker.navigation.Destinations
 import com.example.ecotracker.ui.screens.WelcomeScreen
 import com.example.ecotracker.ui.screens.RegisterScreen
+import com.example.ecotracker.ui.screens.LoginScreen
+import com.example.ecotracker.ui.screens.DashboardScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,11 +31,27 @@ class MainActivity : ComponentActivity() {
                     ) {
                         composable(Destinations.Welcome.route) {
                             WelcomeScreen(
-                                onCreateAccount = { navController.navigate(Destinations.Register.route) }
+                                onCreateAccount = { navController.navigate(Destinations.Register.route) },
+                                onLogin = { navController.navigate(Destinations.Login.route) }
                             )
                         }
                         composable(Destinations.Register.route) {
                             RegisterScreen(onBack = { navController.popBackStack() })
+                        }
+
+                        composable(Destinations.Login.route) {
+                            LoginScreen(
+                                onBack = { navController.popBackStack() },
+                                onLoginSuccess = { navController.navigate(Destinations.Dashboard.route) })
+                        }
+
+                        composable(Destinations.Dashboard.route) {
+                            DashboardScreen(
+                                userEmail = "usuario@ecotracker.com", // por ahora hardcodeado
+                                onLogout = {
+                                    navController.popBackStack(Destinations.Welcome.route, inclusive = false)
+                                }
+                            )
                         }
                     }
                 }
