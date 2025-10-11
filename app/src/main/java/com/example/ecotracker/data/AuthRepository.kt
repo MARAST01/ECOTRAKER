@@ -11,25 +11,39 @@ class AuthRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
-    suspend fun registerWithEmail(fullName: String?, phone: String?, email: String, password: String): Result<UserProfile> = try {
+
+    suspend fun registerWithEmail(
+        fullName: String?,
+        phone: String?,
+        email: String,
+        password: String
+    ): Result<UserProfile> = try {
         auth.createUserWithEmailAndPassword(email, password).await()
         val uid = auth.currentUser?.uid ?: return Result.failure(IllegalStateException("No UID"))
-    val profile = UserProfile(uid = uid, fullName = fullName, phone = phone, email = email, createdAt = System.currentTimeMillis())
+
+        val profile = UserProfile(
+            uid = uid,
+            fullName = fullName,
+            phone = phone,
+            email = email,
+            createdAt = System.currentTimeMillis()
+        )
         firestore.collection("users").document(uid).set(profile).await()
         Result.success(profile)
     } catch (e: Exception) {
-        Log.e("AuthRepository", "registerWithEmail failed: ${'$'}{e.message}", e)
+        Log.e("AuthRepository", "registerWithEmail failed: ${e.message}", e)
         Result.failure(e)
     }
 
     suspend fun loginWithEmail(email: String, password: String): Result<UserProfile> = try {
         auth.signInWithEmailAndPassword(email, password).await()
         val uid = auth.currentUser?.uid ?: return Result.failure(IllegalStateException("No UID"))
+
         val snap = firestore.collection("users").document(uid).get().await()
-    val profile = snap.toObject(UserProfile::class.java) ?: UserProfile(uid = uid, email = email)
+        val profile = snap.toObject(UserProfile::class.java) ?: UserProfile(uid = uid, email = email)
         Result.success(profile)
     } catch (e: Exception) {
-        Log.e("AuthRepository", "loginWithEmail failed: ${'$'}{e.message}", e)
+        Log.e("AuthRepository", "loginWithEmail failed: ${e.message}", e)
         Result.failure(e)
     }
 
@@ -38,17 +52,22 @@ class AuthRepository(
         auth.signInWithCredential(credential).await()
         val uid = auth.currentUser?.uid ?: return Result.failure(IllegalStateException("No UID"))
         val email = auth.currentUser?.email
-    val profile = UserProfile(uid = uid, email = email, createdAt = System.currentTimeMillis())
+
+        val profile = UserProfile(
+            uid = uid,
+            email = email,
+            createdAt = System.currentTimeMillis()
+        )
         firestore.collection("users").document(uid).set(profile).await()
         Result.success(profile)
     } catch (e: Exception) {
-        Log.e("AuthRepository", "signInWithGoogleIdToken failed: ${'$'}{e.message}", e)
+        Log.e("AuthRepository", "signInWithGoogleIdToken failed: ${e.message}", e)
         Result.failure(e)
     }
 
     suspend fun currentProfile(): UserProfile? {
         val uid = auth.currentUser?.uid ?: return null
         val snap = firestore.collection("users").document(uid).get().await()
-    return snap.toObject(UserProfile::class.java) ?: UserProfile(uid = uid, email = auth.currentUser?.email)
+        return snap.toObject(UserProfile::class.java) ?: UserProfile(uid = uid, email = auth.currentUser?.email)
     }
 }

@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import android.util.Log
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
@@ -41,9 +42,13 @@ class MainActivity : ComponentActivity() {
         }
         enableEdgeToEdge()
         setContent {
-            ECOTRACKERTheme {
+            ECOTRACKERTheme(darkTheme = false) {
                 val navController = rememberNavController()
-                Surface(modifier = Modifier.fillMaxSize()) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                ) {
                     val authVm: AuthViewModel = viewModel()
                     val isSignedIn = authVm.state.collectAsState().value.isSignedIn
                     NavHost(
@@ -81,8 +86,8 @@ class MainActivity : ComponentActivity() {
                             RegisterScreen(
                                 onBack = { navController.popBackStack() },
                                 onSuccess = {
-                                    navController.navigate(Destinations.Map.route) {
-                                        popUpTo(Destinations.Welcome.route) { inclusive = true }
+                                    navController.navigate(Destinations.Welcome.route) {
+                                        popUpTo(Destinations.Register.route) { inclusive = true }
                                     }
                                     authVm.refresh()
                                 }

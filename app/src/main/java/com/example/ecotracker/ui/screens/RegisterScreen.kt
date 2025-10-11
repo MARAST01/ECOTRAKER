@@ -5,17 +5,27 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -23,6 +33,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -43,9 +56,25 @@ fun RegisterScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
     var password by remember { mutableStateOf("") }
     val vm: RegisterViewModel = viewModel()
     val ui by vm.uiState.collectAsState(initial = RegisterUiState())
+    val snackbarHostState = remember { SnackbarHostState() }
 
+    val keyboardController = LocalSoftwareKeyboardController.current
+    
     LaunchedEffect(ui.success) {
         if (ui.success != null) {
+            // Ocultar el teclado si está abierto
+            keyboardController?.hide()
+            
+            // Pequeña pausa para que el teclado se oculte
+            delay(100)
+            
+            // Mostrar mensaje de éxito con animación suave
+            snackbarHostState.showSnackbar(
+                message = "Usuario registrado exitosamente",
+                duration = SnackbarDuration.Short
+            )
+            // Esperar solo 1 segundo para navegación más rápida
+            delay(1000)
             onSuccess()
         }
     }
@@ -87,11 +116,30 @@ fun RegisterScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
         launcher.launch(client.signInIntent)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-    ) {
+    Scaffold(
+        snackbarHost = { 
+            SnackbarHost(
+                hostState = snackbarHostState,
+                snackbar = { data ->
+                    androidx.compose.material3.Snackbar(
+                        snackbarData = data,
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        actionColor = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier
+                            .navigationBarsPadding()
+                            .imePadding()
+                    )
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .padding(24.dp)
+        ) {
         Text(
             text = "Crear cuenta",
             style = MaterialTheme.typography.titleLarge,
@@ -163,6 +211,7 @@ fun RegisterScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
                 }
             }
             ui.success != null -> Text("¡Cuenta creada!", color = MaterialTheme.colorScheme.primary)
+        }
         }
     }
 }
