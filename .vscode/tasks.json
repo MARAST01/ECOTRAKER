@@ -1,0 +1,126 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Gradle sync (dependencies)",
+			"type": "shell",
+			"command": "./gradlew.bat help",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gradle"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Gradle sync (after version bump)",
+			"type": "shell",
+			"command": "./gradlew.bat help",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gradle"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Assemble debug (verify MAPS_API_KEY)",
+			"type": "shell",
+			"command": "./gradlew.bat assembleDebug",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gradle"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Assemble debug (retry after import)",
+			"type": "shell",
+			"command": "./gradlew.bat assembleDebug",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gradle"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Assemble debug (verify Firebase resolution)",
+			"type": "shell",
+			"command": "./gradlew.bat assembleDebug",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gradle"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Assemble debug (enforcedPlatform)",
+			"type": "shell",
+			"command": "./gradlew.bat assembleDebug",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gradle"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Assemble debug (verify non-KTX)",
+			"type": "shell",
+			"command": "./gradlew.bat assembleDebug",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gradle"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Assemble debug (nav + button)",
+			"type": "shell",
+			"command": "./gradlew.bat assembleDebug",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gradle"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Assemble debug (maps screen)",
+			"type": "shell",
+			"command": "./gradlew.bat assembleDebug",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gradle"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Assemble debug (maps compose)",
+			"type": "shell",
+			"command": "./gradlew.bat assembleDebug",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gradle"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Assemble debug (remove marker)",
+			"type": "shell",
+			"command": "./gradlew.bat assembleDebug",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gradle"
+			],
+			"group": "build"
+		}
+	]
+}
