@@ -2,12 +2,14 @@ package com.example.ecotracker.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -24,11 +26,14 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun WelcomeScreen(
     onCreateAccount: () -> Unit,
+    onOpenMap: () -> Unit,
+    onLogin: () -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .padding(horizontal = 24.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
@@ -53,12 +58,21 @@ fun WelcomeScreen(
             Spacer(Modifier.height(12.dp))
 
             Button(
-                onClick = { /* Botón deshabilitado - no hace nada */ },
+                onClick = onLogin,
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                enabled = false
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
             ) {
                 Text("Iniciar sesión", color = MaterialTheme.colorScheme.onPrimary)
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Button(
+                onClick = onOpenMap,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+            ) {
+                Text("Ver mapa", color = MaterialTheme.colorScheme.onTertiary)
             }
 
             Spacer(Modifier.height(24.dp))

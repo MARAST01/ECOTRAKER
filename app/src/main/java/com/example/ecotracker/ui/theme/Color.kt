@@ -2,18 +2,16 @@ package com.example.ecotracker.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Eco palette - Dark theme first
-// Primary greens
-val GreenForest = Color(0xFF2E7D32) // #2E7D32 CTA/buttons
-val GreenLime = Color(0xFF81C784)   // #81C784 accents/icons
+// Natural Eco palette - Organic color scheme
+// Primary colors
+val VerdeHoja = Color(0xFF4CAF50)      // #4CAF50 Primary/Buttons
+val VerdeMusgo = Color(0xFF2E7D32)     // #2E7D32 Secondary
+val BeigeClaro = Color(0xFFF1F8E9)     // #F1F8E9 Background
+val MarronTierra = Color(0xFF6D4C41)   // #6D4C41 Text/Icons
+val VerdeMenta = Color(0xFFA5D6A7)     // #A5D6A7 Accents/Highlights
 
-// Info / complementary
-val SkyBlue = Color(0xFF4FC3F7)     // #4FC3F7 info
-val SoftYellow = Color(0xFFFBC02D)  // #FBC02D indicators
-
-// Neutral darks
-val BlackPrimary = Color(0xFF000000) // #000000 background
-val SurfaceDark = Color(0xFF121212)  // #121212 cards/inputs
-val TextPrimary = Color(0xFFFFFFFF)  // #FFFFFF
-val TextSecondary = Color(0xFFB0BEC5) // #B0BEC5 labels
-val Charcoal = Color(0xFF263238)      // #263238 borders
+// Additional colors for better contrast and usability
+val Blanco = Color(0xFFFFFFFF)         // #FFFFFF Pure white for text on dark
+val Negro = Color(0xFF000000)          // #000000 Pure black
+val VerdeClaro = Color(0xFFC8E6C9)     // #C8E6C9 Light green for borders
+val VerdeOscuro = Color(0xFF1B5E20)    // #1B5E20 Dark green for contrast

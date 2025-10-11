@@ -13,27 +13,34 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
-    primary = GreenForest,
-    onPrimary = TextPrimary,
-    secondary = GreenLime,
-    tertiary = SkyBlue,
-    background = BlackPrimary,
-    surface = SurfaceDark,
-    onBackground = TextPrimary,
-    onSurface = TextPrimary,
-    outline = Charcoal
+    primary = VerdeHoja,
+    onPrimary = Blanco,
+    secondary = VerdeMusgo,
+    tertiary = VerdeMenta,
+    background = Negro,
+    surface = VerdeOscuro,
+    onBackground = Blanco,
+    onSurface = Blanco,
+    outline = VerdeClaro,
+    onSecondary = Blanco
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = GreenForest,
-    onPrimary = Color.White,
-    secondary = GreenLime,
-    tertiary = SkyBlue
+    primary = VerdeHoja,
+    onPrimary = Blanco,
+    secondary = VerdeMusgo,
+    tertiary = VerdeMenta,
+    background = BeigeClaro,
+    surface = Blanco,
+    onBackground = MarronTierra,
+    onSurface = MarronTierra,
+    outline = VerdeClaro,
+    onSecondary = Blanco
 )
 
 @Composable
 fun ECOTRACKERTheme(
-    darkTheme: Boolean = true,
+    darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {

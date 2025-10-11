@@ -1,29 +1,26 @@
-# ECOTRAKER
+# 🌱 EcoTracker
 
-Definition of Ready (DoR) – Nivel Equipo
+EcoTracker es una aplicación móvil desarrollada en **Android Studio (Kotlin + Jetpack Compose)** que permite a los usuarios calcular y visualizar su **huella de carbono** en base a hábitos de transporte y consumo energético.  
+La app busca motivar cambios sostenibles mediante estadísticas, recomendaciones y un sistema de insignias.
 
-La historia sigue el marco INVEST.
+---
 
-Tiene valor claro para el usuario.
+## 📌 Características principales
 
-Criterios de aceptación definidos en formato Given–When–Then.
+- 📊 **Registro de hábitos diarios** (transporte, energía, etc.)
+- 🔐 **Autenticación con Google y/o email** (Firebase Auth)
+- ☁️ **Almacenamiento en la nube** con **Cloud Firestore**
+- 🏆 **Gamificación**: logros e insignias según metas alcanzadas
+- 🗺️ **Google Maps & Location**: registrar trayectos y calcular impacto
+- 📈 **Estadísticas visuales** con gráficos y tendencias
+- 🔔 **Notificaciones (futuro)** para recordar registrar hábitos
 
-Dependencias identificadas y resueltas o gestionadas.
+---
 
-La historia está estimada en story points.
+## 🏗️ Arquitectura
 
-Todos en el equipo entienden qué se pide.
-
-Definition of Done (DoD) – Nivel Equipo
-
-Código implementado, revisado (peer review) y mergeado al repositorio.
-
-Pruebas unitarias e integración implementadas y exitosas.
-
-Los criterios de aceptación se cumplen en entorno de pruebas.
-
-Documentación mínima actualizada (ej. README, estructura BD, endpoints).
-
-Despliegue en entorno de desarrollo validado.
-
-Aprobación en Sprint Review.
+- **Lenguaje:** Kotlin  
+- **UI:** Jetpack Compose + Material 3  
+- **Estado:** ViewModel + LiveData/State  
+- **Backend:** Firebase (Auth, Firestore, Analytics)  
+- **Servicios extra:** Google Maps SDK + Location Services  

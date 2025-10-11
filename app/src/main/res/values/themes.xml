@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <style name="Theme.ECOTRACKER" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.ECOTRACKER" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">@color/verde_hoja</item>
+        <item name="android:colorPrimaryDark">@color/verde_musgo</item>
+        <item name="android:colorAccent">@color/verde_menta</item>
+        <item name="android:windowBackground">@color/beige_claro</item>
+        <item name="android:textColorPrimary">@color/marron_tierra</item>
+        <item name="android:textColorSecondary">@color/verde_musgo</item>
+    </style>
 </resources>
