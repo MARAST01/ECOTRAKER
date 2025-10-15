@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -54,6 +55,9 @@ fun RegisterScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
     var phone by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
     val vm: RegisterViewModel = viewModel()
     val ui by vm.uiState.collectAsState(initial = RegisterUiState())
     val snackbarHostState = remember { SnackbarHostState() }
@@ -76,6 +80,23 @@ fun RegisterScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
             // Esperar solo 1 segundo para navegación más rápida
             delay(1000)
             onSuccess()
+        }
+    }
+    
+    LaunchedEffect(ui.error) {
+        val errorMessage = ui.error
+        if (errorMessage != null) {
+            // Ocultar el teclado si está abierto
+            keyboardController?.hide()
+            
+            // Pequeña pausa para que el teclado se oculte
+            delay(100)
+            
+            // Mostrar mensaje de error como snackbar flotante
+            snackbarHostState.showSnackbar(
+                message = errorMessage,
+                duration = SnackbarDuration.Short
+            )
         }
     }
     val context = LocalContext.current
@@ -138,6 +159,7 @@ fun RegisterScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
+                .padding(paddingValues)
                 .padding(24.dp)
         ) {
         Text(
@@ -180,12 +202,46 @@ fun RegisterScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
             label = { Text("Contraseña") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+            visualTransformation = if (passwordVisible) {
+                androidx.compose.ui.text.input.VisualTransformation.None
+            } else {
+                androidx.compose.ui.text.input.PasswordVisualTransformation()
+            },
+            trailingIcon = {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Text(
+                        text = if (passwordVisible) "👁️" else "👁️‍🗨️",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
+        )
+
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+            value = confirmPassword,
+            onValueChange = { confirmPassword = it },
+            label = { Text("Confirmar contraseña") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            visualTransformation = if (confirmPasswordVisible) {
+                androidx.compose.ui.text.input.VisualTransformation.None
+            } else {
+                androidx.compose.ui.text.input.PasswordVisualTransformation()
+            },
+            trailingIcon = {
+                IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                    Text(
+                        text = if (confirmPasswordVisible) "👁️" else "👁️‍🗨️",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
         )
 
         Spacer(Modifier.height(24.dp))
         Button(
-            onClick = { vm.register(fullName.ifBlank { null }, phone.ifBlank { null }, email.trim(), password) },
+            onClick = { vm.register(fullName.ifBlank { null }, phone.ifBlank { null }, email.trim(), password, confirmPassword) },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
@@ -204,12 +260,6 @@ fun RegisterScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
         Spacer(Modifier.height(12.dp))
         when {
             ui.isLoading -> Text("Creando cuenta...", color = MaterialTheme.colorScheme.primary)
-            ui.error != null -> {
-                val msg = ui.error
-                if (msg != null) {
-                    Text(msg, color = MaterialTheme.colorScheme.error)
-                }
-            }
             ui.success != null -> Text("¡Cuenta creada!", color = MaterialTheme.colorScheme.primary)
         }
         }

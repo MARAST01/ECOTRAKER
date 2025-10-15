@@ -32,7 +32,8 @@ class AuthRepository(
         Result.success(profile)
     } catch (e: Exception) {
         Log.e("AuthRepository", "registerWithEmail failed: ${e.message}", e)
-        Result.failure(e)
+        val translatedError = translateFirebaseError(e.message ?: "")
+        Result.failure(Exception(translatedError))
     }
 
     suspend fun loginWithEmail(email: String, password: String): Result<UserProfile> = try {
@@ -44,7 +45,8 @@ class AuthRepository(
         Result.success(profile)
     } catch (e: Exception) {
         Log.e("AuthRepository", "loginWithEmail failed: ${e.message}", e)
-        Result.failure(e)
+        val translatedError = translateFirebaseError(e.message ?: "")
+        Result.failure(Exception(translatedError))
     }
 
     suspend fun signInWithGoogleIdToken(idToken: String): Result<UserProfile> = try {
@@ -62,12 +64,28 @@ class AuthRepository(
         Result.success(profile)
     } catch (e: Exception) {
         Log.e("AuthRepository", "signInWithGoogleIdToken failed: ${e.message}", e)
-        Result.failure(e)
+        val translatedError = translateFirebaseError(e.message ?: "")
+        Result.failure(Exception(translatedError))
     }
 
     suspend fun currentProfile(): UserProfile? {
         val uid = auth.currentUser?.uid ?: return null
         val snap = firestore.collection("users").document(uid).get().await()
         return snap.toObject(UserProfile::class.java) ?: UserProfile(uid = uid, email = auth.currentUser?.email)
+    }
+    
+    private fun translateFirebaseError(errorMessage: String): String {
+        return when {
+            errorMessage.contains("Given String is empty or null") -> "Los campos no pueden estar vacíos"
+            errorMessage.contains("The email address is badly formatted") -> "El formato del correo electrónico no es válido"
+            errorMessage.contains("The password is too weak") -> "La contraseña es muy débil"
+            errorMessage.contains("The email address is already in use") -> "Cuenta ya existente"
+            errorMessage.contains("Password should be at least 6 characters") -> "La contraseña debe tener al menos 6 caracteres"
+            errorMessage.contains("Invalid email") -> "Correo electrónico inválido"
+            errorMessage.contains("User not found") -> "Usuario no encontrado"
+            errorMessage.contains("Wrong password") -> "Contraseña incorrecta"
+            errorMessage.contains("Too many attempts") -> "Demasiados intentos fallidos. Intenta más tarde"
+            else -> errorMessage
+        }
     }
 }

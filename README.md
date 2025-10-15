@@ -23,4 +23,4 @@ La app busca motivar cambios sostenibles mediante estadísticas, recomendaciones
 - **UI:** Jetpack Compose + Material 3  
 - **Estado:** ViewModel + LiveData/State  
 - **Backend:** Firebase (Auth, Firestore, Analytics)  
-- **Servicios extra:** Google Maps SDK + Location Services  
+- **Servicios extra:** Google Maps SDK + Location Services 
