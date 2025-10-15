@@ -18,7 +18,7 @@ class RegisterViewModel(private val repo: AuthRepository = AuthRepository()) : V
     private val _uiState = MutableStateFlow(RegisterUiState())
     val uiState: StateFlow<RegisterUiState> = _uiState
 
-    fun register(fullName: String?, phone: String?, email: String, password: String) {
+    fun register(fullName: String?, phone: String?, email: String, password: String, confirmPassword: String) {
         _uiState.value = RegisterUiState(isLoading = true)
         viewModelScope.launch {
             val result = repo.registerWithEmail(fullName, phone, email, password)
