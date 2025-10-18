@@ -19,6 +19,7 @@ import com.example.ecotracker.ui.screens.WelcomeScreen
 import com.example.ecotracker.ui.screens.RegisterScreen
 import com.example.ecotracker.ui.screens.MapScreen
 import com.example.ecotracker.ui.screens.LoginScreen
+import com.example.ecotracker.ui.screens.TransportSelectionScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.LaunchedEffect
 import com.example.ecotracker.ui.viewmodel.LoginViewModel
@@ -101,7 +102,14 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate(Destinations.Welcome.route) {
                                         popUpTo(Destinations.Map.route) { inclusive = true }
                                     }
-                                }
+                                },
+                                onTransportSelection = { navController.navigate(Destinations.TransportSelection.route) }
+                            )
+                        }
+                        composable(Destinations.TransportSelection.route) {
+                            TransportSelectionScreen(
+                                onBack = { navController.popBackStack() },
+                                onNavigateToMap = { navController.navigate(Destinations.Map.route) }
                             )
                         }
                     }

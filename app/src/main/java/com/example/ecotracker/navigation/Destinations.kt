@@ -4,7 +4,8 @@ enum class Destinations(val route: String) {
     Welcome("welcome"),
     Login("login"),
     Register("register"),
-    Map("map");
+    Map("map"),
+    TransportSelection("transport_selection");
 }
 
 
