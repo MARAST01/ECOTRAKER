@@ -9,9 +9,10 @@ data class TransportRecord(
     var transportType: TransportType? = null,
     var date: String? = null, // Formato: YYYY-MM-DD
     var timestamp: Long? = null,
+    var hour: String? = null, // Formato: HH:mm
     var createdAt: Long? = null
 ) {
-    constructor() : this(null, null, null, null, null, null)
+    constructor() : this(null, null, null, null, null, null, null)
 }
 
 enum class TransportType(val displayName: String, val icon: String) {

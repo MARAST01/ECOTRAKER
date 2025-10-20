@@ -26,7 +26,6 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun WelcomeScreen(
     onCreateAccount: () -> Unit,
-    onOpenMap: () -> Unit,
     onLogin: () -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.background) {
@@ -63,16 +62,6 @@ fun WelcomeScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
             ) {
                 Text("Iniciar sesión", color = MaterialTheme.colorScheme.onPrimary)
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            Button(
-                onClick = onOpenMap,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-            ) {
-                Text("Ver mapa", color = MaterialTheme.colorScheme.onTertiary)
             }
 
             Spacer(Modifier.height(24.dp))
