@@ -41,7 +41,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
 @Composable
-fun MapScreen(onBack: () -> Unit, onSignOut: () -> Unit) {
+fun MapScreen(onBack: () -> Unit, onSignOut: () -> Unit, onTransportSelection: () -> Unit) {
     Surface(color = MaterialTheme.colorScheme.background) {
         val context = LocalContext.current
         var hasLocationPermission by remember { mutableStateOf(false) }
@@ -176,6 +176,21 @@ fun MapScreen(onBack: () -> Unit, onSignOut: () -> Unit) {
                         .padding(16.dp)
                 ) {
                     Text("Cerrar sesión", color = MaterialTheme.colorScheme.onSecondary)
+                }
+            }
+            
+            // Transport selection button top-right
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.TopEnd
+            ) {
+                Button(
+                    onClick = onTransportSelection,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    modifier = Modifier
+                        .padding(16.dp)
+                ) {
+                    Text("🚗 Transporte", color = MaterialTheme.colorScheme.onPrimary)
                 }
             }
 

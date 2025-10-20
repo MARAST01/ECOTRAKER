@@ -17,8 +17,12 @@ import com.example.ecotracker.ui.theme.ECOTRACKERTheme
 import com.example.ecotracker.navigation.Destinations
 import com.example.ecotracker.ui.screens.WelcomeScreen
 import com.example.ecotracker.ui.screens.RegisterScreen
+import com.example.ecotracker.ui.screens.DashboardScreen
 import com.example.ecotracker.ui.screens.MapScreen
 import com.example.ecotracker.ui.screens.LoginScreen
+import com.example.ecotracker.ui.screens.TransportSelectionScreen
+import com.example.ecotracker.ui.screens.RegistryScreen
+import com.example.ecotracker.ui.components.BottomNavigationBar
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.LaunchedEffect
 import com.example.ecotracker.ui.viewmodel.LoginViewModel
@@ -53,12 +57,11 @@ class MainActivity : ComponentActivity() {
                     val isSignedIn = authVm.state.collectAsState().value.isSignedIn
                     NavHost(
                         navController = navController,
-                        startDestination = if (isSignedIn) Destinations.Map.route else Destinations.Welcome.route
+                        startDestination = if (isSignedIn) Destinations.Dashboard.route else Destinations.Welcome.route
                     ) {
                         composable(Destinations.Welcome.route) {
                             WelcomeScreen(
                                 onCreateAccount = { navController.navigate(Destinations.Register.route) },
-                                onOpenMap = { navController.navigate(Destinations.Map.route) },
                                 onLogin = { navController.navigate(Destinations.Login.route) }
                             )
                         }
@@ -67,8 +70,8 @@ class MainActivity : ComponentActivity() {
                             val ui = vm.uiState.collectAsState()
                             LaunchedEffect(ui.value.success) {
                                 if (ui.value.success != null) {
-                                    // Navigate to Map after successful login
-                                    navController.navigate(Destinations.Map.route) {
+                                    // Navigate to Dashboard after successful login
+                                    navController.navigate(Destinations.Dashboard.route) {
                                         popUpTo(Destinations.Welcome.route) { inclusive = true }
                                     }
                                     authVm.refresh()
@@ -93,6 +96,18 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+                        composable(Destinations.Dashboard.route) {
+                            DashboardScreen(
+                                onTransportClick = { navController.navigate(Destinations.TransportSelection.route) },
+                                onRegistryClick = { navController.navigate(Destinations.Registry.route) },
+                                onSignOut = {
+                                    authVm.signOut()
+                                    navController.navigate(Destinations.Welcome.route) {
+                                        popUpTo(Destinations.Dashboard.route) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
                         composable(Destinations.Map.route) {
                             MapScreen(
                                 onBack = { navController.popBackStack() },
@@ -101,7 +116,18 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate(Destinations.Welcome.route) {
                                         popUpTo(Destinations.Map.route) { inclusive = true }
                                     }
-                                }
+                                },
+                                onTransportSelection = { navController.navigate(Destinations.TransportSelection.route) }
+                            )
+                        }
+                        composable(Destinations.Registry.route) {
+                            RegistryScreen(
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                        composable(Destinations.TransportSelection.route) {
+                            TransportSelectionScreen(
+                                onBack = { navController.popBackStack() }
                             )
                         }
                     }
