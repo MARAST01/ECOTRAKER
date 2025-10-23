@@ -7,13 +7,13 @@ La app busca motivar cambios sostenibles mediante estadísticas, recomendaciones
 
 ## 📌 Características principales
 
-- 📊 **Registro de hábitos diarios** (transporte, energía, etc.)
-- 🔐 **Autenticación con Google y/o email** (Firebase Auth)
-- ☁️ **Almacenamiento en la nube** con **Cloud Firestore**
-- 🏆 **Gamificación**: logros e insignias según metas alcanzadas
-- 🗺️ **Google Maps & Location**: registrar trayectos y calcular impacto
-- 📈 **Estadísticas visuales** con gráficos y tendencias
-- 🔔 **Notificaciones (futuro)** para recordar registrar hábitos
+- 📊 **Registro de hábitos diarios** (transporte, energía, etc.).
+- 🔐 **Autenticación con Google y/o email** (Firebase Auth).
+- ☁️ **Almacenamiento en la nube** con **Cloud Firestore**.
+- 🏆 **Gamificación**: logros e insignias según metas alcanzadas.
+- 🗺️ **Google Maps & Location**: registrar trayectos y calcular impacto.
+- 📈 **Estadísticas visuales** con gráficos y tendencias.
+- 🔔 **Notificaciones (futuro)** para recordar registrar hábitos.
 
 ---
 
