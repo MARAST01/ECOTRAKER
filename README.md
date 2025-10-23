@@ -1,26 +1,44 @@
-# 🌱 EcoTracker
+<h1 align="center">🌱 EcoTracker</h1>
+<p align="center">
+  <em>Calcula, comprende y reduce tu huella de carbono</em>  
+</p>
 
-EcoTracker es una aplicación móvil desarrollada en **Android Studio (Kotlin + Jetpack Compose)** que permite a los usuarios calcular y visualizar su **huella de carbono** en base a hábitos de transporte y consumo energético.  
-La app busca motivar cambios sostenibles mediante estadísticas, recomendaciones y un sistema de insignias.
-
----
-
-## 📌 Características principales
-
-- 📊 **Registro de hábitos diarios** (transporte, energía, etc.)
-- 🔐 **Autenticación con Google y/o email** (Firebase Auth)
-- ☁️ **Almacenamiento en la nube** con **Cloud Firestore**
-- 🏆 **Gamificación**: logros e insignias según metas alcanzadas
-- 🗺️ **Google Maps & Location**: registrar trayectos y calcular impacto
-- 📈 **Estadísticas visuales** con gráficos y tendencias
-- 🔔 **Notificaciones (futuro)** para recordar registrar hábitos
+<p align="center">
+  <img src="https://img.shields.io/badge/Android-Kotlin-3DDC84?logo=android&logoColor=white" />
+  <img src="https://img.shields.io/badge/Jetpack-Compose-4285F4?logo=jetpackcompose&logoColor=white" />
+  <img src="https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore-FFCA28?logo=firebase&logoColor=white" />
+  <img src="https://img.shields.io/badge/Status-En%20desarrollo-yellow" />
+</p>
 
 ---
 
-## 🏗️ Arquitectura
+## 🌍 Descripción
 
-- **Lenguaje:** Kotlin  
-- **UI:** Jetpack Compose + Material 3  
-- **Estado:** ViewModel + LiveData/State  
-- **Backend:** Firebase (Auth, Firestore, Analytics)  
-- **Servicios extra:** Google Maps SDK + Location Services 
+**EcoTracker** es una aplicación móvil desarrollada en **Android Studio (Kotlin + Jetpack Compose)** que ayuda a los usuarios a **medir su huella de carbono** según sus hábitos de transporte y consumo energético.  
+La app fomenta **acciones sostenibles** mediante estadísticas, recomendaciones personalizadas y un sistema de **logros e insignias**.
+
+---
+
+## 📱 Características principales
+
+| Funcionalidad | Descripción |
+|---------------|-------------|
+| 📊 **Registro de hábitos** | Transporte, energía y consumo diario. |
+| 🔐 **Autenticación** | Ingreso con Google o correo electrónico (Firebase Auth). |
+| ☁️ **Almacenamiento en la nube** | Cloud Firestore para sincronización de datos. |
+| 🏆 **Gamificación** | Sistema de logros e insignias por metas alcanzadas. |
+| 🗺️ **Google Maps & Location** | Registro de trayectos y cálculo de impacto ambiental. |
+| 📈 **Estadísticas visuales** | Gráficos y tendencias personalizadas. |
+| 🔔 **Notificaciones (próximamente)** | Recordatorios para registrar hábitos diarios. |
+
+---
+
+## 🏗️ Arquitectura y Tecnologías
+
+```mermaid
+graph TD
+    A[UI - Jetpack Compose] --> B[ViewModel]
+    B --> C[Repository]
+    C --> D[Firebase - Firestore]
+    C --> E[Firebase Auth]
+    C --> F[Google Maps SDK]
