@@ -288,9 +288,19 @@ fun TransportRecordCard(record: com.example.ecotracker.data.model.TransportRecor
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
+                    // 🌿 NUEVO: Mostrar distancia si existe
+                    record.distance?.let { distance ->
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Distancia: ${"%.2f".format(distance)} km",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
-            
+
             Text(
                 text = "✓",
                 style = MaterialTheme.typography.titleLarge,
