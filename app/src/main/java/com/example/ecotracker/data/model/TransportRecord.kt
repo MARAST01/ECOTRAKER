@@ -10,6 +10,7 @@ data class TransportRecord(
     var date: String? = null, // Formato: YYYY-MM-DD
     var timestamp: Long? = null,
     var hour: String? = null, // Formato: HH:mm
+    val distance: Double? = null,
     var createdAt: Long? = null
 ) {
     constructor() : this(null, null, null, null, null, null, null)
