@@ -11,15 +11,16 @@ data class TransportRecord(
     var timestamp: Long? = null,
     var hour: String? = null, // Formato: HH:mm
     val distance: Double? = null,
+    var emissionFactor: Double? = null,
     var createdAt: Long? = null
 ) {
     constructor() : this(null, null, null, null, null, null, null)
 }
 
-enum class TransportType(val displayName: String, val icon: String) {
-    CAR("Auto", "🚗"),
-    MOTORCYCLE("Moto", "🏍️"),
-    BUS("Bus", "🚌"),
-    BICYCLE("Bicicleta", "🚲"),
-    WALKING("Caminar", "🚶")
+enum class TransportType(val displayName: String, val icon: String, val emissionFactor: Double) {
+    CAR("Auto", "🚗", 180.0),
+    MOTORCYCLE("Moto", "🏍️", 90.0),
+    BUS("Bus", "🚌", 80.0),
+    BICYCLE("Bicicleta", "🚲", 0.0),
+    WALKING("Caminar", "🚶", 0.0)
 }

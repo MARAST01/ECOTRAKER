@@ -33,6 +33,7 @@ class TransportRepository {
                 timestamp = currentTime,
                 hour = hour,
                 distance = distance,
+                emissionFactor = transportType.emissionFactor,
                 createdAt = currentTime
             )
 

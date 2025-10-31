@@ -83,6 +83,16 @@ fun DashboardScreen(
     val uiState by viewModel.uiState.collectAsState()
     val currentUser = FirebaseAuth.getInstance().currentUser
     
+    // Emisiones de CO2 del día en kg (sumatoria de distancia_km * factor_g/km / 1000)
+    val todayEmissionsKg = remember(uiState.todayRecords) {
+        (uiState.todayRecords).sumOf { record ->
+            val distanceKm = record.distance ?: 0.0
+            val factorGPerKm = record.emissionFactor ?: record.transportType?.emissionFactor ?: 0.0
+            distanceKm * factorGPerKm
+        } / 1000.0
+    }
+    val emissionsText = String.format("%.2f", todayEmissionsKg)
+    
     // Cargar los registros del día al iniciar
     LaunchedEffect(currentUser?.uid) {
         currentUser?.uid?.let { userId ->
@@ -286,7 +296,7 @@ fun DashboardScreen(
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
                                         Text(
-                                            text = "0", // TODO: Calcular CO₂ real
+                                            text = emissionsText,
                                             style = MaterialTheme.typography.headlineMedium,
                                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                                             fontWeight = FontWeight.Bold

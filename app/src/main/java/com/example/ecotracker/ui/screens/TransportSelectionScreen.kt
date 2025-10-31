@@ -146,7 +146,7 @@ fun TransportSelectionScreen(
                 )
             } else {
                 Text(
-                    text = if (uiState.selectedTime.isEmpty()) "Selecciona una hora primero" else "✓ Guardar Registro",
+                    text = if (uiState.selectedTime.isEmpty()) "Selecciona una hora primero" else "Guardar Registro",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -175,36 +175,35 @@ fun TransportSelectionScreen(
         }
     }
     
-    // Mostrar mensaje flotante de éxito
+    // Modal de éxito (no ocupa toda la pantalla)
     if (uiState.showSuccessSnackbar) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF27AE60)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissSuccessSnackbar() },
+            title = {
                 Text(
-                    text = "✓",
-                    color = Color.White,
+                    text = "¡Registro guardado!",
                     fontSize = 20.sp,
-                    modifier = Modifier.padding(end = 8.dp)
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2C3E50)
                 )
-                Text(
-                    text = uiState.successMessage ?: "Registro guardado exitosamente",
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
-                )
+            },
+            text = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = uiState.successMessage ?: "Registro guardado exitosamente",
+                        fontSize = 16.sp,
+                        color = Color(0xFF2C3E50)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.dismissSuccessSnackbar() }) {
+                    Text("Aceptar")
+                }
             }
-        }
+        )
     }
 }
 
@@ -464,7 +463,7 @@ fun TimeSelectorCard(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF27AE60)),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("✓ Confirmar", color = Color.White, fontWeight = FontWeight.Medium)
+                    Text("Confirmar", color = Color.White, fontWeight = FontWeight.Medium)
                 }
             },
             dismissButton = {

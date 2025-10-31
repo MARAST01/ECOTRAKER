@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -44,6 +45,20 @@ fun RegistryScreen(
     val viewModel: TransportViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsState()
     val currentUser = FirebaseAuth.getInstance().currentUser
+    
+    // Resumen para el rango actual (últimos currentDaysBack días)
+    val totalDistanceKm = remember(uiState.paginatedRecords) {
+        uiState.paginatedRecords.sumOf { it.distance ?: 0.0 }
+    }
+    val totalEmissionsKg = remember(uiState.paginatedRecords) {
+        uiState.paginatedRecords.sumOf { record ->
+            val distanceKm = record.distance ?: 0.0
+            val factor = record.emissionFactor ?: record.transportType?.emissionFactor ?: 0.0
+            distanceKm * factor
+        } / 1000.0
+    }
+    val emissionsText = String.format("%.2f", totalEmissionsKg)
+    val distanceText = String.format("%.2f", totalDistanceKm)
     
     // Cargar los registros paginados al iniciar
     LaunchedEffect(currentUser?.uid) {
@@ -125,7 +140,7 @@ fun RegistryScreen(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "0", // TODO: Calcular CO₂ real
+                                text = emissionsText,
                                 style = MaterialTheme.typography.headlineLarge,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 fontWeight = FontWeight.Bold
@@ -153,7 +168,7 @@ fun RegistryScreen(
                         
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "0", // TODO: Calcular km reales
+                                text = distanceText,
                                 style = MaterialTheme.typography.headlineLarge,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 fontWeight = FontWeight.Bold

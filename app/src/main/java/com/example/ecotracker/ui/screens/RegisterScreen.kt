@@ -58,6 +58,12 @@ fun RegisterScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
+    // Errores de validación (tiempo real y al presionar Registrar)
+    var fullNameError by remember { mutableStateOf<String?>(null) }
+    var phoneError by remember { mutableStateOf<String?>(null) }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
     val vm: RegisterViewModel = viewModel()
     val ui by vm.uiState.collectAsState(initial = RegisterUiState())
     val snackbarHostState = remember { SnackbarHostState() }
@@ -169,36 +175,114 @@ fun RegisterScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
         )
         Spacer(Modifier.height(24.dp))
 
+        // Funciones de validación
+        fun isValidPhone(value: String): Boolean = value.matches(Regex("^\\d{10}$"))
+        fun isValidEmail(value: String): Boolean = value.matches(Regex("^[^\\s@]+@[^\\s@]+\\.com$", RegexOption.IGNORE_CASE))
+        fun isValidPassword(value: String): Boolean = value.length >= 6
+        fun matchesConfirm(pass: String, confirm: String): Boolean = pass == confirm
+        fun isNotBlank(value: String): Boolean = value.trim().isNotEmpty()
+
+        fun validateAll(): Boolean {
+            fullNameError = if (!isNotBlank(fullName)) "El nombre es obligatorio" else null
+            phoneError = when {
+                !isNotBlank(phone) -> "El número de celular es obligatorio"
+                !isValidPhone(phone) -> "El número debe tener 10 dígitos"
+                else -> null
+            }
+            emailError = when {
+                !isNotBlank(email) -> "El correo es obligatorio"
+                !isValidEmail(email.trim()) -> "Correo inválido. Debe contener @ y terminar en .com"
+                else -> null
+            }
+            passwordError = when {
+                !isNotBlank(password) -> "La contraseña es obligatoria"
+                !isValidPassword(password) -> "La contraseña debe tener al menos 6 caracteres"
+                else -> null
+            }
+            confirmPasswordError = when {
+                !isNotBlank(confirmPassword) -> "Confirma tu contraseña"
+                !matchesConfirm(password, confirmPassword) -> "Las contraseñas no coinciden"
+                else -> null
+            }
+            return listOf(fullNameError, phoneError, emailError, passwordError, confirmPasswordError).all { it == null }
+        }
+
         OutlinedTextField(
             value = fullName,
-            onValueChange = { fullName = it },
+            onValueChange = {
+                fullName = it
+                fullNameError = if (isNotBlank(fullName)) null else "El nombre es obligatorio"
+            },
             label = { Text("Nombre completo") },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            singleLine = true,
+            isError = fullNameError != null,
+            supportingText = {
+                if (fullNameError != null) {
+                    Text(fullNameError!!, color = MaterialTheme.colorScheme.error)
+                }
+            }
         )
 
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = phone,
-            onValueChange = { phone = it },
+            onValueChange = {
+                phone = it.filter { ch -> ch.isDigit() }.take(10)
+                phoneError = when {
+                    !isNotBlank(phone) -> "El número de celular es obligatorio"
+                    !isValidPhone(phone) -> "El número debe tener 10 dígitos"
+                    else -> null
+                }
+            },
             label = { Text("Número de celular") },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            singleLine = true,
+            isError = phoneError != null,
+            supportingText = {
+                if (phoneError != null) {
+                    Text(phoneError!!, color = MaterialTheme.colorScheme.error)
+                }
+            }
         )
 
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = {
+                email = it
+                emailError = when {
+                    !isNotBlank(email) -> "El correo es obligatorio"
+                    !isValidEmail(email.trim()) -> "Correo inválido. Debe contener @ y terminar en .com"
+                    else -> null
+                }
+            },
             label = { Text("Correo electrónico") },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            singleLine = true,
+            isError = emailError != null,
+            supportingText = {
+                if (emailError != null) {
+                    Text(emailError!!, color = MaterialTheme.colorScheme.error)
+                }
+            }
         )
 
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = {
+                password = it
+                passwordError = when {
+                    !isNotBlank(password) -> "La contraseña es obligatoria"
+                    !isValidPassword(password) -> "La contraseña debe tener al menos 6 caracteres"
+                    else -> null
+                }
+                // Revalidar confirmación si ya fue ingresada
+                if (confirmPassword.isNotEmpty()) {
+                    confirmPasswordError = if (matchesConfirm(password, confirmPassword)) null else "Las contraseñas no coinciden"
+                }
+            },
             label = { Text("Contraseña") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
@@ -214,13 +298,26 @@ fun RegisterScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
+            },
+            isError = passwordError != null,
+            supportingText = {
+                if (passwordError != null) {
+                    Text(passwordError!!, color = MaterialTheme.colorScheme.error)
+                }
             }
         )
 
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = confirmPassword,
-            onValueChange = { confirmPassword = it },
+            onValueChange = {
+                confirmPassword = it
+                confirmPasswordError = when {
+                    !isNotBlank(confirmPassword) -> "Confirma tu contraseña"
+                    !matchesConfirm(password, confirmPassword) -> "Las contraseñas no coinciden"
+                    else -> null
+                }
+            },
             label = { Text("Confirmar contraseña") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
@@ -236,12 +333,22 @@ fun RegisterScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
+            },
+            isError = confirmPasswordError != null,
+            supportingText = {
+                if (confirmPasswordError != null) {
+                    Text(confirmPasswordError!!, color = MaterialTheme.colorScheme.error)
+                }
             }
         )
 
         Spacer(Modifier.height(24.dp))
         Button(
-            onClick = { vm.register(fullName.ifBlank { null }, phone.ifBlank { null }, email.trim(), password, confirmPassword) },
+            onClick = {
+                if (validateAll()) {
+                    vm.register(fullName.ifBlank { null }, phone.ifBlank { null }, email.trim(), password, confirmPassword)
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
