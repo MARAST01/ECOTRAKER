@@ -213,7 +213,7 @@ fun MapScreen(onBack: () -> Unit, onSignOut: () -> Unit, onTransportSelection: (
                     contentAlignment = Alignment.BottomStart
                 ) {
                     Text(
-                        text = "Mapa cargado ✓",
+                        text = "Mapa cargado",
                         color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.bodySmall
                     )

@@ -81,7 +81,7 @@ class TransportViewModel : ViewModel() {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         showSuccessSnackbar = true,
-                        successMessage = "✓ Registro guardado exitosamente",
+                        successMessage = "Registro guardado exitosamente",
                         selectedTime = "",
                         distance = ""
                     )
