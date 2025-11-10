@@ -47,6 +47,41 @@ class TransportRepository {
         }
     }
 
+    suspend fun saveAutoDetectedTrip(
+        trip: TransportRecord,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        try {
+            db.collection(transportCollection)
+                .add(trip)
+                .await()
+
+            onSuccess()
+        } catch (e: Exception) {
+            onError("Error al guardar el trayecto detectado: ${e.message}")
+        }
+    }
+    
+    suspend fun updateTripTransportType(
+        tripId: String,
+        transportType: TransportType
+    ): Boolean {
+        return try {
+            db.collection(transportCollection)
+                .document(tripId)
+                .update(
+                    "transportType", transportType.name,
+                    "emissionFactor", transportType.emissionFactor,
+                    "isConfirmed", true
+                )
+                .await()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     suspend fun getTodayTransportRecord(userId: String): TransportRecord? {
         return try {
             val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
