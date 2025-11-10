@@ -21,6 +21,12 @@ import com.example.ecotracker.ui.viewmodel.TransportViewModel
 import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,13 +64,17 @@ fun TransportSelectionScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TextButton(onClick = onBack) {
+            TextButton(
+                onClick = onBack,
+                modifier = Modifier.height(48.dp)
+            ) {
                 Text("← Atrás")
             }
             Text(
                 text = "Seleccionar Transporte",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
+            , modifier = Modifier.semantics { heading() }
             )
             Spacer(modifier = Modifier.width(60.dp)) // Para centrar el título
         }
@@ -76,7 +86,9 @@ fun TransportSelectionScreen(
             text = "¿Cómo te transportaste hoy?",
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { heading() },
             textAlign = TextAlign.Center
         )
         
@@ -148,7 +160,8 @@ fun TransportSelectionScreen(
                 Text(
                     text = if (uiState.selectedTime.isEmpty()) "Selecciona una hora primero" else "Guardar Registro",
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = if (uiState.selectedTransport != null && uiState.selectedTime.isNotEmpty()) Color.White else MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -215,9 +228,15 @@ fun TransportOptionCard(
 ) {
     Card(
         onClick = onSelect,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                role = Role.Button
+                contentDescription = "Opción de transporte ${transport.displayName}"
+                stateDescription = if (isSelected) "Seleccionado" else "No seleccionado"
+            },
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) Color(0xFF4CAF50) else Color.White
+            containerColor = if (isSelected) Color(0xFF3A823E) else Color.White
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (isSelected) 8.dp else 2.dp
@@ -284,7 +303,8 @@ fun TimeSelectorCard(
                         text = "Hora del transporte",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF2C3E50)
+                        color = Color(0xFF2C3E50),
+                        modifier = Modifier.semantics { heading() }
                     )
                 }
                 

@@ -5,7 +5,6 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButton
@@ -35,8 +35,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -48,6 +46,8 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 @Composable
 fun RegisterScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
@@ -65,7 +65,7 @@ fun RegisterScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
     var passwordError by remember { mutableStateOf<String?>(null) }
     var confirmPasswordError by remember { mutableStateOf<String?>(null) }
     val vm: RegisterViewModel = viewModel()
-    val ui by vm.uiState.collectAsState(initial = RegisterUiState())
+    val ui: RegisterUiState by vm.uiState.collectAsState(initial = RegisterUiState())
     val snackbarHostState = remember { SnackbarHostState() }
 
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -90,7 +90,7 @@ fun RegisterScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
     }
     
     LaunchedEffect(ui.error) {
-        val errorMessage = ui.error
+        val errorMessage: String? = ui.error
         if (errorMessage != null) {
             // Ocultar el teclado si está abierto
             keyboardController?.hide()
@@ -292,7 +292,12 @@ fun RegisterScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
                 androidx.compose.ui.text.input.PasswordVisualTransformation()
             },
             trailingIcon = {
-                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                IconButton(
+                    onClick = { passwordVisible = !passwordVisible },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .semantics { contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña" }
+                ) {
                     Text(
                         text = if (passwordVisible) "👁️" else "👁️‍🗨️",
                         style = MaterialTheme.typography.bodyLarge
@@ -327,7 +332,12 @@ fun RegisterScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
                 androidx.compose.ui.text.input.PasswordVisualTransformation()
             },
             trailingIcon = {
-                IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                IconButton(
+                    onClick = { confirmPasswordVisible = !confirmPasswordVisible },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .semantics { contentDescription = if (confirmPasswordVisible) "Ocultar confirmación de contraseña" else "Mostrar confirmación de contraseña" }
+                ) {
                     Text(
                         text = if (confirmPasswordVisible) "👁️" else "👁️‍🗨️",
                         style = MaterialTheme.typography.bodyLarge
