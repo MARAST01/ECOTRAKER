@@ -65,6 +65,13 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 
 @Composable
 fun DashboardScreen(
@@ -91,7 +98,31 @@ fun DashboardScreen(
             distanceKm * factorGPerKm
         } / 1000.0
     }
-    val emissionsText = String.format("%.2f", todayEmissionsKg)
+    
+    // Formatear emisiones a la unidad más apropiada (g, kg, t)
+    val (emissionsText, emissionsUnit) = remember(todayEmissionsKg) {
+        when {
+            todayEmissionsKg >= 1000.0 -> {
+                // Toneladas (t) - para valores >= 1000 kg
+                val tons = todayEmissionsKg / 1000.0
+                Pair(String.format("%.2f", tons), "t CO₂")
+            }
+            todayEmissionsKg >= 1.0 -> {
+                // Kilogramos (kg) - para valores entre 1 kg y 1000 kg
+                Pair(String.format("%.2f", todayEmissionsKg), "kg CO₂")
+            }
+            todayEmissionsKg >= 0.001 -> {
+                // Gramos (g) - para valores entre 1 g y 1 kg
+                val grams = todayEmissionsKg * 1000.0
+                Pair(String.format("%.1f", grams), "g CO₂")
+            }
+            else -> {
+                // Menos de 1 gramo - mostrar en gramos con más decimales
+                val grams = todayEmissionsKg * 1000.0
+                Pair(String.format("%.2f", grams), "g CO₂")
+            }
+        }
+    }
     
     // Cargar los registros del día al iniciar
     LaunchedEffect(currentUser?.uid) {
@@ -203,13 +234,15 @@ fun DashboardScreen(
                         Text(
                             text = errorText!!,
                             color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive }
                         )
                     } else if (!hasLocationPermission) {
                         Text(
                             text = "Se requieren permisos de ubicación para mostrar el mapa",
                             color = MaterialTheme.colorScheme.onBackground,
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
                         )
                     }
                 }
@@ -237,7 +270,11 @@ fun DashboardScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { isExpanded = !isExpanded },
+                            .clickable { isExpanded = !isExpanded }
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = if (isExpanded) "Contraer resumen EcoTracker" else "Expandir resumen EcoTracker"
+                            },
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -245,7 +282,8 @@ fun DashboardScreen(
                             text = "EcoTracker",
                             style = MaterialTheme.typography.headlineLarge,
                             color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.semantics { heading() }
                         )
                         
                         Spacer(Modifier.width(8.dp))
@@ -278,56 +316,76 @@ fun DashboardScreen(
                                 text = "Tu huella de carbono hoy",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .semantics { heading() },
                                 textAlign = TextAlign.Center
                             )
 
-                            // Estadísticas rápidas
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
+                            // Mostrar mensaje si no hay datos o estadísticas si hay datos
+                            if (uiState.todayRecords.isEmpty()) {
                                 Card(
-                                    modifier = Modifier.weight(1f),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                                 ) {
-                                    Column(
-                                        modifier = Modifier.padding(16.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text(
-                                            text = emissionsText,
-                                            style = MaterialTheme.typography.headlineMedium,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = "kg CO₂",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
-                                    }
+                                    Text(
+                                        text = "No hay datos disponibles",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(24.dp),
+                                        textAlign = TextAlign.Center
+                                    )
                                 }
-                                
-                                Card(
-                                    modifier = Modifier.weight(1f),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                            } else {
+                                // Estadísticas rápidas
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Column(
-                                        modifier = Modifier.padding(16.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    Card(
+                                        modifier = Modifier.weight(1f),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                                     ) {
-                                        Text(
-                                            text = "${uiState.todayRecords.size}",
-                                            style = MaterialTheme.typography.headlineMedium,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = "Viajes",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                                        )
+                                        Column(
+                                            modifier = Modifier.padding(16.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Text(
+                                                text = emissionsText,
+                                                style = MaterialTheme.typography.headlineMedium,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = emissionsUnit,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                        }
+                                    }
+                                    
+                                    Card(
+                                        modifier = Modifier.weight(1f),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(16.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Text(
+                                                text = "${uiState.todayRecords.size}",
+                                                style = MaterialTheme.typography.headlineMedium,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "Viajes",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -352,7 +410,11 @@ fun DashboardScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator()
                     Spacer(Modifier.height(16.dp))
-                    Text("Cargando mapa...", color = MaterialTheme.colorScheme.onBackground)
+                    Text(
+                        "Cargando mapa...",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                    )
                 }
             }
         }

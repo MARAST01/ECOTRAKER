@@ -57,8 +57,51 @@ fun RegistryScreen(
             distanceKm * factor
         } / 1000.0
     }
-    val emissionsText = String.format("%.2f", totalEmissionsKg)
-    val distanceText = String.format("%.2f", totalDistanceKm)
+    
+    // Formatear emisiones a la unidad más apropiada (g, kg, t)
+    val (emissionsText, emissionsUnit) = remember(totalEmissionsKg) {
+        when {
+            totalEmissionsKg >= 1000.0 -> {
+                // Toneladas (t) - para valores >= 1000 kg
+                val tons = totalEmissionsKg / 1000.0
+                Pair(String.format("%.2f", tons), "t CO₂")
+            }
+            totalEmissionsKg >= 1.0 -> {
+                // Kilogramos (kg) - para valores entre 1 kg y 1000 kg
+                Pair(String.format("%.2f", totalEmissionsKg), "kg CO₂")
+            }
+            totalEmissionsKg >= 0.001 -> {
+                // Gramos (g) - para valores entre 1 g y 1 kg
+                val grams = totalEmissionsKg * 1000.0
+                Pair(String.format("%.1f", grams), "g CO₂")
+            }
+            else -> {
+                // Menos de 1 gramo - mostrar en gramos con más decimales
+                val grams = totalEmissionsKg * 1000.0
+                Pair(String.format("%.2f", grams), "g CO₂")
+            }
+        }
+    }
+    
+    // Formatear distancia con abreviaciones (k para miles, m para millones)
+    val (distanceText, distanceUnit) = remember(totalDistanceKm) {
+        when {
+            totalDistanceKm >= 1000000.0 -> {
+                // Millones (m) - para valores >= 1,000,000 km
+                val millions = totalDistanceKm / 1000000.0
+                Pair(String.format("%.2f", millions), "m km")
+            }
+            totalDistanceKm >= 1000.0 -> {
+                // Miles (k) - para valores entre 1,000 y 1,000,000 km
+                val thousands = totalDistanceKm / 1000.0
+                Pair(String.format("%.2f", thousands), "k km")
+            }
+            else -> {
+                // Menos de 1000 km - mostrar normalmente
+                Pair(String.format("%.2f", totalDistanceKm), "km")
+            }
+        }
+    }
     
     // Cargar los registros paginados al iniciar
     LaunchedEffect(currentUser?.uid) {
@@ -134,49 +177,75 @@ fun RegistryScreen(
                     
                     Spacer(Modifier.height(16.dp))
                     
-                    Row(
+                    // Layout responsive: Row en pantallas grandes, Column en pantallas pequeñas
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = emissionsText,
-                                style = MaterialTheme.typography.headlineLarge,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "kg CO₂",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
+                        // Primera fila: CO₂ y Viajes
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = emissionsText,
+                                    style = MaterialTheme.typography.headlineLarge,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                                Text(
+                                    text = emissionsUnit,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    maxLines = 1
+                                )
+                            }
+                            
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = "${uiState.paginatedRecords.size}",
+                                    style = MaterialTheme.typography.headlineLarge,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Viajes (Últimos ${uiState.currentDaysBack} días)",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    maxLines = 2,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
                         
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "${uiState.paginatedRecords.size}",
-                                style = MaterialTheme.typography.headlineLarge,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Viajes (Últimos ${uiState.currentDaysBack} días)",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                        
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        // Segunda fila: Distancia (siempre en su propia fila para evitar desbordamiento)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Text(
                                 text = distanceText,
                                 style = MaterialTheme.typography.headlineLarge,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false
                             )
                             Text(
-                                text = "km",
+                                text = distanceUnit,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                maxLines = 1
                             )
                         }
                     }
@@ -304,11 +373,24 @@ fun TransportRecordCard(record: com.example.ecotracker.data.model.TransportRecor
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    // 🌿 NUEVO: Mostrar distancia si existe
+                    // 🌿 NUEVO: Mostrar distancia si existe con formato abreviado
                     record.distance?.let { distance ->
                         Spacer(Modifier.height(4.dp))
+                        val (formattedDistance, distanceUnitCard) = when {
+                            distance >= 1000000.0 -> {
+                                val millions = distance / 1000000.0
+                                Pair(String.format("%.2f", millions), "m km")
+                            }
+                            distance >= 1000.0 -> {
+                                val thousands = distance / 1000.0
+                                Pair(String.format("%.2f", thousands), "k km")
+                            }
+                            else -> {
+                                Pair(String.format("%.2f", distance), "km")
+                            }
+                        }
                         Text(
-                            text = "Distancia: ${"%.2f".format(distance)} km",
+                            text = "Distancia: $formattedDistance $distanceUnitCard",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )

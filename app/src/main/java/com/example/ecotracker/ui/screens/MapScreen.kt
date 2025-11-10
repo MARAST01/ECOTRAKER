@@ -39,6 +39,9 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 
 @Composable
 fun MapScreen(onBack: () -> Unit, onSignOut: () -> Unit, onTransportSelection: () -> Unit) {
@@ -199,7 +202,11 @@ fun MapScreen(onBack: () -> Unit, onSignOut: () -> Unit, onTransportSelection: (
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator()
                         Spacer(Modifier.height(16.dp))
-                        Text("Cargando mapa...", color = MaterialTheme.colorScheme.onBackground)
+                        Text(
+                            "Cargando mapa...",
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                        )
                     }
                 }
             }
@@ -215,13 +222,18 @@ fun MapScreen(onBack: () -> Unit, onSignOut: () -> Unit, onTransportSelection: (
                     Text(
                         text = "Mapa cargado",
                         color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
                     )
                 }
             }
             errorText?.let { msg ->
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-                    Text(msg, color = MaterialTheme.colorScheme.error)
+                    Text(
+                        msg,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive }
+                    )
                 }
             }
         }
