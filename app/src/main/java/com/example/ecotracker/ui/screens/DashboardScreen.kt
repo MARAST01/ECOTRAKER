@@ -74,6 +74,86 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import android.util.Log
+
+@Composable
+fun SpeedIndicator(
+    speedKmh: Float,
+    isTracking: Boolean,
+    modifier: Modifier = Modifier
+) {
+    // Redondear a 1 decimal y asegurar que no sea negativo
+    val displaySpeed = maxOf(0f, speedKmh)
+    
+    // Determinar el estado: solo "Trayecto activo" cuando está registrando un trayecto
+    val isActiveTrip = isTracking
+    
+    Card(
+        modifier = modifier
+            .shadow(4.dp, RoundedCornerShape(12.dp)),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isActiveTrip) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f)
+            }
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Indicador de estado - Verde solo cuando está registrando trayecto activo
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .background(
+                        color = if (isActiveTrip) {
+                            // Verde/primario cuando está registrando trayecto
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            // Gris cuando solo está detectando
+                            MaterialTheme.colorScheme.outline
+                        },
+                        shape = CircleShape
+                    )
+            )
+            
+            Column {
+                Text(
+                    text = "${String.format("%.1f", displaySpeed)} km/h",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isActiveTrip) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+                Text(
+                    text = if (isActiveTrip) {
+                        "Trayecto activo"
+                    } else {
+                        "Detectando"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isActiveTrip) {
+                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    }
+                )
+            }
+        }
+    }
+}
 
 @Composable
 fun DashboardScreen(
@@ -153,15 +233,21 @@ fun DashboardScreen(
     
     // Solicitar ignorar optimizaciones de batería (crítico para 24/7)
     LaunchedEffect(currentUser?.uid, hasLocationPermission, hasBackgroundLocationPermission) {
+        Log.d("DashboardScreen", "🔍 LaunchedEffect - User: ${currentUser?.uid != null}, Location: $hasLocationPermission, Background: $hasBackgroundLocationPermission")
         if (currentUser != null && hasLocationPermission && hasBackgroundLocationPermission) {
+            Log.d("DashboardScreen", "✅ Todas las condiciones cumplidas, iniciando servicio")
             // Verificar si ya está ignorando optimizaciones de batería
             if (!BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) {
                 // Solicitar permiso para ignorar optimizaciones de batería
+                Log.d("DashboardScreen", "🔋 Solicitando ignorar optimizaciones de batería")
                 BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context)
             }
             
             // Iniciar detección automática
+            Log.d("DashboardScreen", "▶️ Llamando a startTripDetectionAutomatically")
             tripDetectionViewModel.startTripDetectionAutomatically(context)
+        } else {
+            Log.d("DashboardScreen", "⏸️ Condiciones no cumplidas - User: ${currentUser != null}, Location: $hasLocationPermission, Background: $hasBackgroundLocationPermission")
         }
     }
     var isLoading by remember { mutableStateOf(true) }
@@ -457,6 +543,21 @@ fun DashboardScreen(
                 onTransportClick = onTransportClick,
                 onRegistryClick = onRegistryClick,
                 onSignOut = onSignOut
+            )
+        }
+        
+        // Indicador de velocidad en la parte inferior izquierda
+        val tripDetectionState by tripDetectionViewModel.uiState.collectAsState()
+        val speedKmh = tripDetectionState.currentSpeed * 3.6f // Convertir m/s a km/h
+        
+        // Mostrar siempre el indicador si hay permisos (incluso si está en 0 para ver que funciona)
+        if (hasLocationPermission) {
+            SpeedIndicator(
+                speedKmh = speedKmh,
+                isTracking = tripDetectionState.isTracking,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 16.dp, bottom = 80.dp) // Más arriba para no sobreponerse con la barra
             )
         }
 

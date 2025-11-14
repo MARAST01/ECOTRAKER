@@ -283,6 +283,7 @@ fun RegistryScreen(
                         isExpanded = isExpanded,
                         onExpandToggle = { isExpanded = !isExpanded },
                         onConfirmTrip = { transportType ->
+                            // Confirmación automática al seleccionar transporte
                             currentUser?.uid?.let { userId ->
                                 tripDetectionViewModel.confirmTrip(userId, trip, transportType)
                             }

@@ -63,61 +63,63 @@ fun TripMapCard(
                     )
                     Spacer(Modifier.width(12.dp))
                     Column {
-                        Text(
-                            text = if (record.isAutoDetected && !record.isConfirmed) {
-                                "Trayecto Detectado"
+                        // Mostrar información del trayecto como en la imagen
+                        record.distance?.let { distance ->
+                            val distanceText = if (distance >= 1.0) {
+                                "${String.format("%.1f", distance)} km"
                             } else {
-                                record.transportType?.displayName ?: "Transporte"
-                            },
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                                "${String.format("%.0f", distance * 1000)} m"
+                            }
+                            Text(
+                                text = "Trayecto $distanceText",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        } ?: run {
+                            Text(
+                                text = if (record.isAutoDetected && !record.isConfirmed) {
+                                    "Trayecto Detectado"
+                                } else {
+                                    record.transportType?.displayName ?: "Transporte"
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        
+                        // Mostrar hora de inicio y fin si están disponibles
+                        val timeText = if (record.startTime != null && record.endTime != null) {
+                            val startTime = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+                                .format(java.util.Date(record.startTime!!))
+                            val endTime = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+                                .format(java.util.Date(record.endTime!!))
+                            val duration = record.duration?.let { 
+                                val minutes = (it / 60000).toInt()
+                                "($minutes min)"
+                            } ?: ""
+                            "$startTime - $endTime $duration"
+                        } else {
+                            "Registrado a las ${record.hour ?: "N/A"}"
+                        }
+                        
                         Text(
-                            text = "Registrado a las ${record.hour ?: "N/A"}",
+                            text = timeText,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         
-                        record.distance?.let { distance ->
-                            Spacer(Modifier.height(4.dp))
-                            val (formattedDistance, distanceUnit) = when {
-                                distance >= 1000000.0 -> {
-                                    val millions = distance / 1000000.0
-                                    Pair(String.format("%.2f", millions), "m km")
-                                }
-                                distance >= 1000.0 -> {
-                                    val thousands = distance / 1000.0
-                                    Pair(String.format("%.2f", thousands), "k km")
-                                }
-                                else -> {
-                                    Pair(String.format("%.2f", distance), "km")
-                                }
-                            }
-                            Text(
-                                text = "Distancia: $formattedDistance $distanceUnit",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        
-                        // Mostrar duración y velocidad si están disponibles
-                        record.duration?.let { duration ->
-                            val minutes = (duration / 60000).toInt()
-                            val seconds = ((duration % 60000) / 1000).toInt()
-                            Text(
-                                text = "Duración: ${minutes}m ${seconds}s",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        
+                        // Mostrar velocidad si está disponible (solo si no es caminar)
                         record.averageSpeed?.let { speed ->
-                            Text(
-                                text = "Velocidad promedio: ${String.format("%.1f", speed)} km/h",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            if (speed > 3.0) { // Solo mostrar velocidad si es mayor a 3 km/h (no caminar)
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = "Velocidad: ${String.format("%.0f", speed)} km/h",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
@@ -145,11 +147,15 @@ fun TripMapCard(
                 Spacer(Modifier.height(12.dp))
                 TripMinimap(routePoints = routePoints)
                 
-                // Botones de confirmación si es un trayecto detectado automáticamente
+                // Selector de transporte si es un trayecto detectado automáticamente
+                // La confirmación es automática al seleccionar
                 if (record.isAutoDetected && !record.isConfirmed && onConfirmTrip != null) {
                     Spacer(Modifier.height(12.dp))
                     TransportTypeSelector(
-                        onTransportSelected = onConfirmTrip,
+                        onTransportSelected = { transportType ->
+                            // Confirmar automáticamente al seleccionar
+                            onConfirmTrip(transportType)
+                        },
                         onDismiss = onDismissTrip
                     )
                 }
@@ -162,20 +168,34 @@ fun TripMapCard(
 fun TripMinimap(routePoints: List<LocationPoint>) {
     if (routePoints.isEmpty()) return
     
-    // Calcular el centro y los límites del mapa
-    val centerLat = routePoints.map { it.latitude }.average()
-    val centerLng = routePoints.map { it.longitude }.average()
+    // Calcular los límites del mapa para incluir toda la ruta con padding
+    val minLat = routePoints.minOf { it.latitude }
+    val maxLat = routePoints.maxOf { it.latitude }
+    val minLng = routePoints.minOf { it.longitude }
+    val maxLng = routePoints.maxOf { it.longitude }
+    
+    // Calcular el centro
+    val centerLat = (minLat + maxLat) / 2.0
+    val centerLng = (minLng + maxLng) / 2.0
     val center = LatLng(centerLat, centerLng)
     
     // Calcular el zoom apropiado basado en la extensión de los puntos
-    val latRange = routePoints.maxOf { it.latitude } - routePoints.minOf { it.latitude }
-    val lngRange = routePoints.maxOf { it.longitude } - routePoints.minOf { it.longitude }
+    // Usar una fórmula más precisa para calcular el zoom que muestre toda la ruta
+    val latRange = maxLat - minLat
+    val lngRange = maxLng - minLng
     val maxRange = maxOf(latRange, lngRange)
+    
+    // Calcular zoom dinámico basado en el rango
+    // Fórmula: zoom = log2(360 / range) - ajuste para padding
     val zoom = when {
-        maxRange > 0.1 -> 10f
-        maxRange > 0.05 -> 12f
-        maxRange > 0.01 -> 14f
-        else -> 16f
+        maxRange > 0.1 -> 11f
+        maxRange > 0.05 -> 12.5f
+        maxRange > 0.02 -> 14f
+        maxRange > 0.01 -> 15f
+        maxRange > 0.005 -> 16f
+        maxRange > 0.002 -> 17f
+        maxRange > 0.001 -> 17.5f
+        else -> 18f
     }
     
     val cameraPositionState = rememberCameraPositionState {
@@ -188,7 +208,7 @@ fun TripMinimap(routePoints: List<LocationPoint>) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp)
+            .height(350.dp) // Aumentado para mejor visualización del trayecto
     ) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
@@ -198,34 +218,38 @@ fun TripMinimap(routePoints: List<LocationPoint>) {
                 isMyLocationEnabled = false
             ),
             uiSettings = MapUiSettings(
-                zoomControlsEnabled = false,
+                zoomControlsEnabled = true,
                 myLocationButtonEnabled = false,
                 zoomGesturesEnabled = true,
-                scrollGesturesEnabled = true
+                scrollGesturesEnabled = true,
+                tiltGesturesEnabled = false,
+                rotationGesturesEnabled = false
             )
         ) {
-            // Dibujar la ruta
+            // Dibujar la ruta con línea más gruesa y color más visible (como en la imagen)
             if (routeLatLngs.size >= 2) {
                 Polyline(
                     points = routeLatLngs,
                     color = MaterialTheme.colorScheme.primary,
-                    width = 8f
+                    width = 14f // Línea más gruesa para mejor visibilidad
                 )
             }
             
-            // Marcador de inicio
+            // Marcador de inicio (teardrop púrpura como en la imagen)
             routePoints.firstOrNull()?.let { start ->
                 Marker(
                     state = MarkerState(position = LatLng(start.latitude, start.longitude)),
-                    title = "Inicio"
+                    title = "Inicio",
+                    snippet = "Punto de partida"
                 )
             }
             
-            // Marcador de fin
+            // Marcador de fin (teardrop púrpura con círculo blanco como en la imagen)
             routePoints.lastOrNull()?.let { end ->
                 Marker(
                     state = MarkerState(position = LatLng(end.latitude, end.longitude)),
-                    title = "Fin"
+                    title = "Fin",
+                    snippet = "Destino"
                 )
             }
         }
