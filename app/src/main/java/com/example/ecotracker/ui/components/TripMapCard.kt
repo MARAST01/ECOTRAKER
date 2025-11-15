@@ -30,10 +30,11 @@ fun TripMapCard(
     val routePoints = record.routePoints ?: emptyList()
     val hasRoute = routePoints.isNotEmpty()
     
+    // Hacer el card clickeable siempre para poder expandir/colapsar
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (hasRoute) Modifier.clickable { onExpandToggle() } else Modifier),
+            .clickable { onExpandToggle() },
         colors = CardDefaults.cardColors(
             containerColor = if (record.isAutoDetected && !record.isConfirmed) {
                 MaterialTheme.colorScheme.secondaryContainer
@@ -142,10 +143,20 @@ fun TripMapCard(
                 }
             }
             
-            // Minimapa expandible
-            if (isExpanded && hasRoute) {
-                Spacer(Modifier.height(12.dp))
-                TripMinimap(routePoints = routePoints)
+            // Minimapa expandible (solo si hay puntos de ruta)
+            if (isExpanded) {
+                if (hasRoute) {
+                    Spacer(Modifier.height(12.dp))
+                    TripMinimap(routePoints = routePoints)
+                } else {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = "No hay puntos de ruta disponibles para este trayecto",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
                 
                 // Selector de transporte si es un trayecto detectado automáticamente
                 // La confirmación es automática al seleccionar

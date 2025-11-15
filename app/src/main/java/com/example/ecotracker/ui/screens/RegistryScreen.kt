@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.util.Log
 import com.example.ecotracker.data.model.TransportRecord
 import com.example.ecotracker.data.model.TransportType
 import com.example.ecotracker.ui.components.TripMapCard
@@ -114,10 +115,33 @@ fun RegistryScreen(
         }
     }
     
-    // Cargar los registros paginados al iniciar
-    LaunchedEffect(currentUser?.uid) {
+    // Variable para forzar recarga cuando se guarda un trayecto
+    var reloadTrigger by remember { mutableStateOf(0) }
+    
+    // Cargar los registros paginados al iniciar y cuando se detecta un nuevo trayecto
+    LaunchedEffect(currentUser?.uid, tripDetectionState.pendingTrips.size, reloadTrigger) {
         currentUser?.uid?.let { userId ->
+            Log.d("RegistryScreen", "🔄 Recargando registros...")
+            Log.d("RegistryScreen", "   👤 UserId: $userId")
+            Log.d("RegistryScreen", "   📋 Pendientes: ${tripDetectionState.pendingTrips.size}")
+            Log.d("RegistryScreen", "   🔄 Reload trigger: $reloadTrigger")
             viewModel.loadPaginatedRecords(userId, 15)
+        }
+    }
+    
+    // Recargar cuando la pantalla se vuelve visible (cuando el usuario vuelve a la app)
+    LaunchedEffect(Unit) {
+        // Recargar periódicamente cada 10 segundos solo cuando la pantalla está visible
+        // Esto asegura que los trayectos guardados aparezcan sin ser demasiado agresivo
+        while (true) {
+            kotlinx.coroutines.delay(10000) // 10 segundos
+            currentUser?.uid?.let { userId ->
+                // Solo recargar si no estamos cargando actualmente
+                if (!uiState.isLoadingMore) {
+                    Log.d("RegistryScreen", "🔄 Recarga periódica de registros (cada 10s)...")
+                    viewModel.loadPaginatedRecords(userId, 15)
+                }
+            }
         }
     }
     
@@ -349,6 +373,10 @@ fun RegistryScreen(
                             mutableStateOf(expandedTripIds.contains(record.id))
                         }
                         
+                        // Si el trayecto no tiene tipo de transporte asignado, mostrar selector
+                        val needsTransportType = record.isAutoDetected && 
+                                                 (record.transportType == null || !record.isConfirmed)
+                        
                         TripMapCard(
                             record = record,
                             isExpanded = isExpanded,
@@ -359,7 +387,15 @@ fun RegistryScreen(
                                 } else {
                                     expandedTripIds = expandedTripIds - (record.id ?: "")
                                 }
-                            }
+                            },
+                            onConfirmTrip = if (needsTransportType) { transportType ->
+                                // Actualizar el tipo de transporte del trayecto guardado
+                                currentUser?.uid?.let { userId ->
+                                    tripDetectionViewModel.confirmTrip(userId, record, transportType)
+                                    // Recargar los registros después de actualizar
+                                    viewModel.loadPaginatedRecords(userId, 15)
+                                }
+                            } else null
                         )
                     }
                     
