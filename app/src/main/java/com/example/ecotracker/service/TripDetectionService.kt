@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.SensorManager
 import android.location.Location
 import android.os.Build
 import android.os.IBinder
@@ -31,6 +32,12 @@ class TripDetectionService : Service() {
     private lateinit var locationCallback: LocationCallback
     private var wakeLock: PowerManager.WakeLock? = null
     
+    // Sensor Fusion Manager para detectar movimiento usando acelerómetro + giroscopio
+    private var sensorFusionManager: SensorFusionManager? = null
+    private var sensorManager: SensorManager? = null
+    private var sensorMovementDetected = false
+    private var sensorMovementType = SensorFusionManager.MovementType.STATIONARY
+    
     // Estado del trayecto actual
     private var currentTrip: MutableList<LocationPoint> = mutableListOf()
     private var tripStartTime: Long? = null
@@ -38,7 +45,8 @@ class TripDetectionService : Service() {
     private var lastLocationTime: Long = 0
     private var isTracking = false
     private var stationaryStartTime: Long? = null
-    private val STATIONARY_THRESHOLD_MS = 90000L // 90 segundos sin movimiento (aumentado para vehículos)
+    private var lastMovingLocation: Location? = null // Última ubicación cuando había movimiento
+    private val STATIONARY_THRESHOLD_MS = 240000L // 4 minutos sin movimiento (240 segundos)
     private val MIN_DISTANCE_METERS = 10.0 // Mínimo 10 metros para considerar un trayecto (reducido para detectar trayectos cortos a pie)
     private val MOVEMENT_SPEED_THRESHOLD_WALKING = 0.3 // m/s (1.08 km/h) - para caminar (reducido para ser más sensible)
     private val MOVEMENT_SPEED_THRESHOLD_VEHICLE = 2.0 // m/s (7.2 km/h) - para vehículos
@@ -92,8 +100,25 @@ class TripDetectionService : Service() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         createNotificationChannel()
         setupLocationRequest()
+        setupSensorFusion()
         acquireWakeLock()
         Log.d("TripDetection", "✅ Servicio inicializado correctamente")
+    }
+    
+    private fun setupSensorFusion() {
+        try {
+            sensorManager = getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+            sensorManager?.let { sm ->
+                sensorFusionManager = SensorFusionManager(sm) { isMoving, movementType ->
+                    sensorMovementDetected = isMoving
+                    sensorMovementType = movementType
+                    Log.d("TripDetection", "📱 Sensor Fusion - Movimiento: $isMoving, Tipo: $movementType")
+                }
+                Log.d("TripDetection", "✅ Sensor Fusion Manager inicializado")
+            } ?: Log.w("TripDetection", "⚠️ SensorManager no disponible")
+        } catch (e: Exception) {
+            Log.e("TripDetection", "❌ Error al inicializar Sensor Fusion: ${e.message}", e)
+        }
     }
     
     private fun acquireWakeLock() {
@@ -281,10 +306,9 @@ class TripDetectionService : Service() {
                 MOVEMENT_SPEED_THRESHOLD_WALKING
             }
             
-            // Detectar movimiento: 
-            // - Para vehículos: velocidad alta O distancia significativa en poco tiempo
-            // - Para caminar: ser MUY permisivo - detectar con cualquier desplazamiento significativo
-            val isMoving = if (isLikelyVehicle) {
+            // FUSIÓN DE SENSORES + GPS (similar a Life360)
+            // Combinar detección GPS con sensores (acelerómetro + giroscopio)
+            val gpsBasedMovement = if (isLikelyVehicle) {
                 // Para vehículos, ser más permisivo - detectar incluso con velocidades bajas
                 // si hay desplazamiento significativo
                 reportedSpeed >= MOVEMENT_SPEED_THRESHOLD_VEHICLE || 
@@ -300,20 +324,91 @@ class TripDetectionService : Service() {
                 (distance >= 5.0 && timeDiff < 60000) // 5 metros en menos de 60 segundos
             }
             
+            // FUSIÓN: Si los sensores detectan movimiento (especialmente caminando), confiar en ellos
+            // incluso si el GPS no es preciso
+            val isMoving = when {
+                // Si los sensores detectan caminando/corriendo, confiar en ellos
+                sensorMovementType == SensorFusionManager.MovementType.WALKING ||
+                sensorMovementType == SensorFusionManager.MovementType.RUNNING -> {
+                    // Los sensores son más confiables para detectar caminar
+                    // Usar GPS solo para confirmar o si hay desplazamiento significativo
+                    sensorMovementDetected || gpsBasedMovement || distance >= 2.0
+                }
+                
+                // Si los sensores detectan vehículo, combinar con GPS
+                sensorMovementType == SensorFusionManager.MovementType.VEHICLE -> {
+                    // Para vehículos, el GPS es más confiable, pero los sensores ayudan
+                    gpsBasedMovement || (sensorMovementDetected && reportedSpeed > 1.0)
+                }
+                
+                // Si los sensores dicen que está quieto, pero el GPS muestra movimiento significativo
+                sensorMovementType == SensorFusionManager.MovementType.STATIONARY -> {
+                    // Confiar más en GPS si hay desplazamiento grande o velocidad alta
+                    gpsBasedMovement && (distance >= 10.0 || reportedSpeed >= 2.0)
+                }
+                
+                // En otros casos, usar lógica GPS normal
+                else -> gpsBasedMovement || sensorMovementDetected
+            }
+            
+            // Calcular velocidad mejorada usando fusión de sensores
+            // Si los sensores detectan caminando pero el GPS muestra 0, estimar velocidad basada en pasos
+            val finalSpeed = when {
+                // Si los sensores detectan caminando/corriendo y el GPS no muestra velocidad
+                (sensorMovementType == SensorFusionManager.MovementType.WALKING ||
+                 sensorMovementType == SensorFusionManager.MovementType.RUNNING) &&
+                reportedSpeed < 0.5 -> {
+                    // Estimar velocidad basada en pasos detectados
+                    val stepsPerSecond = sensorFusionManager?.getStepsPerSecond() ?: 0.0
+                    
+                    // Velocidad promedio caminando: ~1.4 m/s (5 km/h), corriendo: ~3 m/s (11 km/h)
+                    val estimatedSpeed = when (sensorMovementType) {
+                        SensorFusionManager.MovementType.WALKING -> {
+                            // Si hay pasos detectados, usar velocidad estimada
+                            if (stepsPerSecond > 0.5) {
+                                maxOf(0.8, minOf(2.0, stepsPerSecond * 0.7)) // 0.8-2.0 m/s
+                            } else {
+                                maxOf(reportedSpeed, 0.5) // Mínimo 0.5 m/s si hay movimiento
+                            }
+                        }
+                        SensorFusionManager.MovementType.RUNNING -> {
+                            // Corriendo: 2.5-4.5 m/s
+                            if (stepsPerSecond > 1.0) {
+                                maxOf(2.5, minOf(4.5, stepsPerSecond * 1.2))
+                            } else {
+                                maxOf(reportedSpeed, 1.5)
+                            }
+                        }
+                        else -> reportedSpeed
+                    }
+                    estimatedSpeed
+                }
+                
+                // Si hay movimiento GPS, usar esa velocidad
+                reportedSpeed > 0.5 -> reportedSpeed
+                
+                // En otros casos, usar la velocidad reportada
+                else -> reportedSpeed
+            }
+            
             // Log de debugging más frecuente para diagnosticar problemas
             val logEvery = if (isTracking) 5 else 3 // Log más frecuente cuando está tracking
             if (System.currentTimeMillis() % (logEvery * 1000) < 1000) {
-                Log.d("TripDetection", "📍 Ubicación - Dist: ${String.format("%.2f", distance)}m, GPS: ${String.format("%.2f", gpsSpeed * 3.6)} km/h, Calc: ${String.format("%.2f", calculatedSpeed * 3.6)} km/h, Final: ${String.format("%.2f", reportedSpeed * 3.6)} km/h, Moviendo: $isMoving, Tracking: $isTracking, TimeDiff: ${timeDiff}ms, Accuracy: ${location.accuracy}m")
+                Log.d("TripDetection", "📍 Ubicación - Dist: ${String.format("%.2f", distance)}m, GPS: ${String.format("%.2f", gpsSpeed * 3.6)} km/h, Calc: ${String.format("%.2f", calculatedSpeed * 3.6)} km/h, GPS-Reported: ${String.format("%.2f", reportedSpeed * 3.6)} km/h")
+                Log.d("TripDetection", "   📱 Sensores - Movimiento: $sensorMovementDetected, Tipo: $sensorMovementType, Pasos: ${sensorFusionManager?.getStepCount() ?: 0}, Pasos/seg: ${String.format("%.2f", sensorFusionManager?.getStepsPerSecond() ?: 0.0)}")
+                Log.d("TripDetection", "   ✅ Resultado - Velocidad Final: ${String.format("%.2f", finalSpeed * 3.6)} km/h, Moviendo: $isMoving, Tracking: $isTracking, TimeDiff: ${timeDiff}ms, Accuracy: ${location.accuracy}m")
             }
             
             // Log especial cuando hay movimiento pero no está tracking (para diagnosticar por qué no inicia)
             if (isMoving && !isTracking) {
-                Log.d("TripDetection", "🚶 MOVIMIENTO DETECTADO pero NO tracking - Dist: ${String.format("%.2f", distance)}m, Speed: ${String.format("%.2f", reportedSpeed * 3.6)} km/h, TimeDiff: ${timeDiff}ms")
+                Log.d("TripDetection", "🚶 MOVIMIENTO DETECTADO pero NO tracking")
+                Log.d("TripDetection", "   📍 GPS - Dist: ${String.format("%.2f", distance)}m, Speed: ${String.format("%.2f", reportedSpeed * 3.6)} km/h, GPS-Based: $gpsBasedMovement")
+                Log.d("TripDetection", "   📱 Sensores - Movimiento: $sensorMovementDetected, Tipo: $sensorMovementType, Velocidad Final: ${String.format("%.2f", finalSpeed * 3.6)} km/h")
             }
             
             // Notificar actualización de velocidad (cada actualización)
             // Asegurar que la velocidad sea siempre >= 0
-            notifySpeedUpdate(maxOf(0f, reportedSpeed.toFloat()), isTracking)
+            notifySpeedUpdate(maxOf(0f, finalSpeed.toFloat()), isTracking)
             
             if (isMoving) {
                 // Hay movimiento - activar seguimiento de alta frecuencia
@@ -322,6 +417,7 @@ class TripDetectionService : Service() {
                 } else {
                     // Continuar el trayecto
                     addLocationPoint(location)
+                    lastMovingLocation = location // Guardar última ubicación con movimiento
                     stationaryStartTime = null
                     
                     // Actualizar notificación cada 10 puntos para no saturar
@@ -330,20 +426,68 @@ class TripDetectionService : Service() {
                     }
                 }
             } else {
-                // No hay movimiento significativo
+                // No hay movimiento significativo según GPS
+                // IMPORTANTE: Para finalizar trayectos, confiar más en GPS que en sensores
+                // Los sensores pueden detectar movimiento del teléfono aunque estés quieto
                 if (isTracking) {
-                    // Estamos en un trayecto pero ahora estamos quietos
+                    // Estamos en un trayecto pero ahora estamos quietos según GPS
                     // NO agregar más puntos al trayecto cuando está quieto
-                    if (stationaryStartTime == null) {
-                        stationaryStartTime = currentTime
-                        Log.d("TripDetection", "⏸️ Movimiento detenido - Esperando ${STATIONARY_THRESHOLD_MS / 1000}s para finalizar trayecto")
+                    
+                    // Verificar si realmente no hay movimiento GPS (no solo sensores)
+                    val gpsIsStationary = !gpsBasedMovement && distance < 5.0 && reportedSpeed < 0.5
+                    
+                    if (gpsIsStationary) {
+                        if (stationaryStartTime == null) {
+                            stationaryStartTime = currentTime
+                            val waitTimeMinutes = STATIONARY_THRESHOLD_MS / 60000
+                            Log.d("TripDetection", "⏸️⏸️⏸️ GPS DETECTA QUIETO - Esperando ${waitTimeMinutes} minutos para finalizar trayecto ⏸️⏸️⏸️")
+                            Log.d("TripDetection", "   📍 Última ubicación con movimiento: Lat: ${lastMovingLocation?.latitude ?: location.latitude}, Lng: ${lastMovingLocation?.longitude ?: location.longitude}")
+                            Log.d("TripDetection", "   📍 Ubicación actual: Lat: ${location.latitude}, Lng: ${location.longitude}")
+                            Log.d("TripDetection", "   📊 Estado: Puntos: ${currentTrip.size}, Distancia: ${String.format("%.2f", calculateTotalDistance(currentTrip))}m")
+                            Log.d("TripDetection", "   📱 Sensores: Movimiento: $sensorMovementDetected, Tipo: $sensorMovementType (ignorado para finalización)")
+                        } else {
+                            val timeStationary = currentTime - stationaryStartTime!!
+                            val remainingTime = STATIONARY_THRESHOLD_MS - timeStationary
+                            
+                            // Log cada 30 segundos para monitorear el progreso
+                            if (timeStationary % 30000 < 2000) {
+                                val minutesStationary = timeStationary / 60000
+                                val secondsStationary = (timeStationary % 60000) / 1000
+                                val minutesRemaining = remainingTime / 60000
+                                val secondsRemaining = (remainingTime % 60000) / 1000
+                                Log.d("TripDetection", "⏸️ GPS QUIETO: ${minutesStationary}m ${secondsStationary}s - Faltan ${minutesRemaining}m ${secondsRemaining}s para finalizar")
+                            }
+                            
+                            // Si llevamos más de STATIONARY_THRESHOLD_MS quietos según GPS, finalizar trayecto
+                            if (timeStationary >= STATIONARY_THRESHOLD_MS) {
+                                val minutesStationary = timeStationary / 60000
+                                val secondsStationary = (timeStationary % 60000) / 1000
+                                Log.d("TripDetection", "⏹️⏹️⏹️⏹️⏹️ TIEMPO COMPLETADO (${minutesStationary}m ${secondsStationary}s) - FINALIZANDO TRAYECTO ⏹️⏹️⏹️⏹️⏹️")
+                                Log.d("TripDetection", "   📊 Estado final: Puntos: ${currentTrip.size}, Distancia: ${String.format("%.2f", calculateTotalDistance(currentTrip))}m")
+                                
+                                // Agregar el último punto de movimiento (si existe) antes de finalizar
+                                lastMovingLocation?.let { lastMoving ->
+                                    if (currentTrip.isEmpty() || 
+                                        currentTrip.last().latitude != lastMoving.latitude ||
+                                        currentTrip.last().longitude != lastMoving.longitude) {
+                                        addLocationPoint(lastMoving)
+                                        Log.d("TripDetection", "   ✅ Agregado último punto de movimiento antes de finalizar")
+                                    }
+                                }
+                                
+                                // Finalizar el trayecto ANTES de cambiar a baja frecuencia
+                                endTrip()
+                                
+                                // Cambiar a modo de baja frecuencia después de finalizar
+                                switchToLowFrequencyTracking()
+                            }
+                        }
                     } else {
-                        // Si llevamos más de STATIONARY_THRESHOLD_MS quietos, finalizar trayecto
-                        if (currentTime - stationaryStartTime!! >= STATIONARY_THRESHOLD_MS) {
-                            Log.d("TripDetection", "⏹️ Tiempo de espera completado - Finalizando trayecto")
-                            endTrip()
-                            // Cambiar a modo de baja frecuencia
-                            switchToLowFrequencyTracking()
+                        // El GPS aún muestra movimiento, resetear contador estacionario
+                        if (stationaryStartTime != null) {
+                            Log.d("TripDetection", "🔄 GPS detecta movimiento nuevamente - Cancelando finalización")
+                            stationaryStartTime = null
+                            lastMovingLocation = location
                         }
                     }
                 } else {
@@ -362,6 +506,7 @@ class TripDetectionService : Service() {
         tripStartTime = time
         currentTrip.clear()
         stationaryStartTime = null
+        lastMovingLocation = location // Guardar primera ubicación como última con movimiento
         
         Log.d("TripDetection", "🚀🚀🚀 TRAYECTO INICIADO 🚀🚀🚀 - Lat: ${location.latitude}, Lng: ${location.longitude}, Velocidad GPS: ${location.speed * 3.6} km/h, Accuracy: ${location.accuracy}m")
         
@@ -483,6 +628,7 @@ class TripDetectionService : Service() {
         tripStartTime = null
         currentTrip.clear()
         stationaryStartTime = null
+        lastMovingLocation = null
     }
     
     private fun switchToHighFrequencyTracking() {
@@ -681,6 +827,11 @@ class TripDetectionService : Service() {
         
         // Iniciar con modo de baja frecuencia (pero más frecuente que antes)
         switchToLowFrequencyTracking()
+        
+        // Iniciar sensor fusion
+        sensorFusionManager?.startListening()
+        Log.d("TripDetection", "✅ Sensor Fusion iniciado")
+        
         Log.d("TripDetection", "✅ Seguimiento de ubicación iniciado - Modo: Baja frecuencia")
     }
     
@@ -689,6 +840,10 @@ class TripDetectionService : Service() {
             endTrip()
         }
         fusedLocationClient.removeLocationUpdates(locationCallback)
+        
+        // Detener sensor fusion
+        sensorFusionManager?.stopListening()
+        Log.d("TripDetection", "✅ Sensor Fusion detenido")
     }
     
     override fun onBind(intent: Intent?): IBinder? = null
@@ -696,8 +851,10 @@ class TripDetectionService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         stopLocationTracking()
+        sensorFusionManager?.stopListening()
         releaseWakeLock()
         serviceScope.cancel()
+        Log.d("TripDetection", "🛑 Servicio destruido completamente")
     }
 }
 
