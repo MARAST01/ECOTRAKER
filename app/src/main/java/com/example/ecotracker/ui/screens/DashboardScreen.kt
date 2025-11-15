@@ -206,8 +206,8 @@ fun DashboardScreen(
                     isMyLocationEnabled = hasLocationPermission
                 ),
                 uiSettings = MapUiSettings(
-                    zoomControlsEnabled = true, 
-                    myLocationButtonEnabled = true,
+                    zoomControlsEnabled = false, 
+                    myLocationButtonEnabled = false,
                     compassEnabled = true,
                     zoomGesturesEnabled = true,
                     scrollGesturesEnabled = true,
@@ -259,7 +259,7 @@ fun DashboardScreen(
                     .fillMaxWidth()
                     .padding(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                    containerColor = androidx.compose.ui.graphics.Color.White
                 )
             ) {
                 Column(
@@ -281,7 +281,7 @@ fun DashboardScreen(
                         Text(
                             text = "EcoTracker",
                             style = MaterialTheme.typography.headlineLarge,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.secondary,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.semantics { heading() }
                         )

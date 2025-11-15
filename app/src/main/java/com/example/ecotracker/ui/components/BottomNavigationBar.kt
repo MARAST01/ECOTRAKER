@@ -45,7 +45,7 @@ fun BottomNavigationBar(
             // Botón de Transporte
             Button(
                 onClick = onTransportClick,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                 modifier = Modifier
                     .weight(1f)
                     .focusRequester(transportFocus)
@@ -60,7 +60,7 @@ fun BottomNavigationBar(
             ) {
                 Text(
                     text = "Transporte",
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    color = MaterialTheme.colorScheme.onSecondary,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1
                 )
