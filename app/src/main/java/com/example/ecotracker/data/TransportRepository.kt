@@ -177,4 +177,28 @@ class TransportRepository {
             emptyList()
         }
     }
+
+    suspend fun getTodayEmissionsKg(userId: String): Double {
+        return try {
+            val records = getTodayTransportRecords(userId)
+
+            val totalGrams = records.sumOf { record ->
+                val distanceKm = record.distance ?: return@sumOf 0.0
+
+                // Factor prioritario:
+                // 1) emissionFactor guardado en el registro
+                // 2) valor por defecto del TransportType
+                val factor = record.emissionFactor
+                    ?: record.transportType?.emissionFactor
+                    ?: 0.0
+
+                distanceKm * factor  // g CO₂
+            }
+
+            totalGrams / 1000.0
+        } catch (e: Exception) {
+            0.0
+        }
+    }
+
 }

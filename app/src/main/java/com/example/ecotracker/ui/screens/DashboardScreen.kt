@@ -91,6 +91,7 @@ fun DashboardScreen(
     val currentUser = FirebaseAuth.getInstance().currentUser
     
     // Emisiones de CO2 del día en kg (sumatoria de distancia_km * factor_g/km / 1000)
+<<<<<<< Updated upstream
     val todayEmissionsKg = remember(uiState.todayRecords) {
         (uiState.todayRecords).sumOf { record ->
             val distanceKm = record.distance ?: 0.0
@@ -123,6 +124,9 @@ fun DashboardScreen(
             }
         }
     }
+=======
+    val emissionsText = String.format("%.2f", uiState.todayEmissionsKg)
+>>>>>>> Stashed changes
     
     // Cargar los registros del día al iniciar
     LaunchedEffect(currentUser?.uid) {
