@@ -25,14 +25,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ecotracker.data.model.TransportRecord
+import com.example.ecotracker.data.model.TransportType
+import com.example.ecotracker.ui.components.TripMapCard
 import com.example.ecotracker.ui.viewmodel.TransportViewModel
+import com.example.ecotracker.ui.viewmodel.TripDetectionViewModel
 import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -43,8 +49,13 @@ fun RegistryScreen(
     onBack: () -> Unit
 ) {
     val viewModel: TransportViewModel = viewModel()
+    val tripDetectionViewModel: TripDetectionViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsState()
+    val tripDetectionState by tripDetectionViewModel.uiState.collectAsState()
     val currentUser = FirebaseAuth.getInstance().currentUser
+    
+    // Estado para controlar qué cards están expandidos
+    var expandedTripIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     
     // Resumen para el rango actual (últimos currentDaysBack días)
     val totalDistanceKm = remember(uiState.paginatedRecords) {
@@ -254,9 +265,42 @@ fun RegistryScreen(
 
             Spacer(Modifier.height(24.dp))
 
+            // Trayectos pendientes de confirmación
+            if (tripDetectionState.pendingTrips.isNotEmpty()) {
+                Text(
+                    text = "Trayectos Pendientes de Confirmación",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(8.dp))
+                
+                tripDetectionState.pendingTrips.forEach { trip ->
+                    var isExpanded by remember { mutableStateOf(false) }
+                    
+                    TripMapCard(
+                        record = trip,
+                        isExpanded = isExpanded,
+                        onExpandToggle = { isExpanded = !isExpanded },
+                        onConfirmTrip = { transportType ->
+                            // Confirmación automática al seleccionar transporte
+                            currentUser?.uid?.let { userId ->
+                                tripDetectionViewModel.confirmTrip(userId, trip, transportType)
+                            }
+                        },
+                        onDismissTrip = {
+                            tripDetectionViewModel.dismissTrip(trip)
+                        }
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+                
+                Spacer(Modifier.height(16.dp))
+            }
+
             // Lista de registros
             Text(
-                text = "Registros del día",
+                text = "Registros",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Bold
@@ -267,7 +311,7 @@ fun RegistryScreen(
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (uiState.paginatedRecords.isEmpty()) {
+                if (uiState.paginatedRecords.isEmpty() && tripDetectionState.pendingTrips.isEmpty()) {
                     // Mensaje cuando no hay registros
                     item {
                         Card(
@@ -301,7 +345,22 @@ fun RegistryScreen(
                 } else {
                     // Lista de transportes paginados
                     items(uiState.paginatedRecords) { record ->
-                        TransportRecordCard(record = record)
+                        var isExpanded by remember(record.id) { 
+                            mutableStateOf(expandedTripIds.contains(record.id))
+                        }
+                        
+                        TripMapCard(
+                            record = record,
+                            isExpanded = isExpanded,
+                            onExpandToggle = {
+                                isExpanded = !isExpanded
+                                if (isExpanded) {
+                                    expandedTripIds = expandedTripIds + (record.id ?: "")
+                                } else {
+                                    expandedTripIds = expandedTripIds - (record.id ?: "")
+                                }
+                            }
+                        )
                     }
                     
                     // Botón para cargar más registros
@@ -339,70 +398,3 @@ fun RegistryScreen(
     }
 }
 
-@Composable
-fun TransportRecordCard(record: com.example.ecotracker.data.model.TransportRecord) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = record.transportType?.icon ?: "🚗",
-                    style = MaterialTheme.typography.headlineMedium
-                )
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text(
-                        text = record.transportType?.displayName ?: "Transporte",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Registrado a las ${record.hour ?: "N/A"}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    // 🌿 NUEVO: Mostrar distancia si existe con formato abreviado
-                    record.distance?.let { distance ->
-                        Spacer(Modifier.height(4.dp))
-                        val (formattedDistance, distanceUnitCard) = when {
-                            distance >= 1000000.0 -> {
-                                val millions = distance / 1000000.0
-                                Pair(String.format("%.2f", millions), "m km")
-                            }
-                            distance >= 1000.0 -> {
-                                val thousands = distance / 1000.0
-                                Pair(String.format("%.2f", thousands), "k km")
-                            }
-                            else -> {
-                                Pair(String.format("%.2f", distance), "km")
-                            }
-                        }
-                        Text(
-                            text = "Distancia: $formattedDistance $distanceUnitCard",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            }
-
-            Text(
-                text = "✓",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-    }
-}

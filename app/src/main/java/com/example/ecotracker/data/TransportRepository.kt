@@ -1,5 +1,6 @@
 package com.example.ecotracker.data
 
+import android.util.Log
 import com.example.ecotracker.data.model.TransportRecord
 import com.example.ecotracker.data.model.TransportType
 import com.google.firebase.firestore.FirebaseFirestore
@@ -44,6 +45,58 @@ class TransportRepository {
             onSuccess()
         } catch (e: Exception) {
             onError("Error al guardar el registro: ${e.message}")
+        }
+    }
+
+    suspend fun saveAutoDetectedTrip(
+        trip: TransportRecord,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        try {
+            Log.d("TransportRepository", "💾 Guardando trayecto detectado automáticamente")
+            Log.d("TransportRepository", "   📅 Fecha: ${trip.date}")
+            Log.d("TransportRepository", "   📏 Distancia: ${trip.distance} km")
+            Log.d("TransportRepository", "   👤 UserId: ${trip.userId}")
+            Log.d("TransportRepository", "   🚗 Tipo: ${trip.transportType?.displayName ?: "Pendiente"}")
+            Log.d("TransportRepository", "   ✅ isAutoDetected: ${trip.isAutoDetected}")
+            Log.d("TransportRepository", "   ✅ isConfirmed: ${trip.isConfirmed}")
+            Log.d("TransportRepository", "   📍 Puntos GPS: ${trip.routePoints?.size ?: 0}")
+            
+            val result = db.collection(transportCollection)
+                .add(trip)
+                .await()
+            
+            Log.d("TransportRepository", "✅✅✅ TRAYECTO GUARDADO EXITOSAMENTE ✅✅✅")
+            Log.d("TransportRepository", "   🆔 Firestore ID: ${result.id}")
+            Log.d("TransportRepository", "   📍 Colección: $transportCollection")
+            
+            onSuccess()
+        } catch (e: Exception) {
+            Log.e("TransportRepository", "❌❌❌ ERROR AL GUARDAR TRAYECTO ❌❌❌")
+            Log.e("TransportRepository", "   Mensaje: ${e.message}")
+            Log.e("TransportRepository", "   Stack trace:", e)
+            e.printStackTrace()
+            onError("Error al guardar el trayecto detectado: ${e.message}")
+        }
+    }
+    
+    suspend fun updateTripTransportType(
+        tripId: String,
+        transportType: TransportType
+    ): Boolean {
+        return try {
+            db.collection(transportCollection)
+                .document(tripId)
+                .update(
+                    "transportType", transportType.name,
+                    "emissionFactor", transportType.emissionFactor,
+                    "isConfirmed", true
+                )
+                .await()
+            true
+        } catch (e: Exception) {
+            false
         }
     }
 
