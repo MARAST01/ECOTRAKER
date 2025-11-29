@@ -7,7 +7,9 @@ enum class Destinations(val route: String) {
     Dashboard("dashboard"),
     Map("map"),
     TransportSelection("transport_selection"),
-    Registry("registry");
+    Registry("registry"),
+    Friendship("friendship"),
+    Profile("profile");
 }
 
 

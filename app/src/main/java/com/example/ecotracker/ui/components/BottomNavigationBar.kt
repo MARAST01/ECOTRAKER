@@ -23,13 +23,13 @@ import androidx.compose.ui.focus.focusProperties
 
 @Composable
 fun BottomNavigationBar(
-    onTransportClick: () -> Unit,
+    onProfileClick: () -> Unit,
     onRegistryClick: () -> Unit,
-    onSignOut: () -> Unit
+    onFriendshipClick: () -> Unit
 ) {
-    val transportFocus = FocusRequester()
+    val profileFocus = FocusRequester()
     val registryFocus = FocusRequester()
-    val signOutFocus = FocusRequester()
+    val friendshipFocus = FocusRequester()
 
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -42,24 +42,24 @@ fun BottomNavigationBar(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Botón de Transporte
+            // Botón de Perfil
             Button(
-                onClick = onTransportClick,
+                onClick = onProfileClick,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 modifier = Modifier
                     .weight(1f)
-                    .focusRequester(transportFocus)
+                    .focusRequester(profileFocus)
                     .focusProperties {
                         next = registryFocus
-                        previous = signOutFocus
+                        previous = friendshipFocus
                     }
                     .semantics {
                         role = Role.Button
-                        contentDescription = "Abrir selección de transporte"
+                        contentDescription = "Abrir perfil"
                     }
             ) {
                 Text(
-                    text = "Transporte",
+                    text = "Perfil",
                     color = MaterialTheme.colorScheme.onPrimary,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1
@@ -74,8 +74,8 @@ fun BottomNavigationBar(
                     .weight(1f)
                     .focusRequester(registryFocus)
                     .focusProperties {
-                        next = signOutFocus
-                        previous = transportFocus
+                        next = friendshipFocus
+                        previous = profileFocus
                     }
                     .semantics {
                         role = Role.Button
@@ -90,25 +90,25 @@ fun BottomNavigationBar(
                 )
             }
 
-            // Botón de Cerrar sesión
+            // Botón de Amistades
             Button(
-                onClick = onSignOut,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                onClick = onFriendshipClick,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
                 modifier = Modifier
                     .weight(1f)
-                    .focusRequester(signOutFocus)
+                    .focusRequester(friendshipFocus)
                     .focusProperties {
-                        next = transportFocus
+                        next = profileFocus
                         previous = registryFocus
                     }
                     .semantics {
                         role = Role.Button
-                        contentDescription = "Cerrar sesión"
+                        contentDescription = "Abrir amistades"
                     }
             ) {
                 Text(
-                    text = "Salir",
-                    color = MaterialTheme.colorScheme.onError,
+                    text = "Amistades",
+                    color = MaterialTheme.colorScheme.onTertiary,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1
                 )
