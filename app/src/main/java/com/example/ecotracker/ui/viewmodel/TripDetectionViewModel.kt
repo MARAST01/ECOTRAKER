@@ -37,6 +37,7 @@ class TripDetectionViewModel(application: Application) : AndroidViewModel(applic
             when (intent?.action) {
                 TripDetectionReceiver.ACTION_TRIP_DETECTED -> {
                     android.util.Log.d("TripDetectionViewModel", "📨 Broadcast recibido: ACTION_TRIP_DETECTED")
+                    val isSaved = intent.getBooleanExtra("is_saved", false)
                     val trip = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         intent.getSerializableExtra(TripDetectionReceiver.EXTRA_TRIP, TransportRecord::class.java)
                     } else {
@@ -45,7 +46,18 @@ class TripDetectionViewModel(application: Application) : AndroidViewModel(applic
                     }
                     if (trip != null) {
                         android.util.Log.d("TripDetectionViewModel", "✅ Trayecto deserializado correctamente")
-                        onTripDetected(trip)
+                        android.util.Log.d("TripDetectionViewModel", "   📦 is_saved: $isSaved")
+                        android.util.Log.d("TripDetectionViewModel", "   🆔 ID: ${trip.id}")
+                        
+                        // Si el trayecto ya está guardado (tiene ID o is_saved=true), no agregarlo a pendientes
+                        // Solo notificar que se debe recargar la lista
+                        if (isSaved || trip.id != null) {
+                            android.util.Log.d("TripDetectionViewModel", "   ✅ Trayecto ya guardado, no agregar a pendientes")
+                            android.util.Log.d("TripDetectionViewModel", "   📤 La UI debe recargar los registros automáticamente")
+                        } else {
+                            // Si no está guardado, agregarlo a pendientes
+                            onTripDetected(trip)
+                        }
                     } else {
                         android.util.Log.e("TripDetectionViewModel", "❌ Error: Trayecto es null después de deserializar")
                     }
@@ -134,11 +146,24 @@ class TripDetectionViewModel(application: Application) : AndroidViewModel(applic
     }
     
     fun onTripDetected(trip: TransportRecord) {
-        android.util.Log.d("TripDetectionViewModel", "📥 Trayecto recibido - Distancia: ${trip.distance} km, Puntos: ${trip.routePoints?.size ?: 0}")
+        android.util.Log.d("TripDetectionViewModel", "📥📥📥 TRAYECTO RECIBIDO EN VIEWMODEL 📥📥📥")
+        android.util.Log.d("TripDetectionViewModel", "   🆔 ID: ${trip.id}")
+        android.util.Log.d("TripDetectionViewModel", "   📏 Distancia: ${trip.distance} km")
+        android.util.Log.d("TripDetectionViewModel", "   📍 Puntos GPS: ${trip.routePoints?.size ?: 0}")
+        android.util.Log.d("TripDetectionViewModel", "   📅 Fecha: ${trip.date}")
+        android.util.Log.d("TripDetectionViewModel", "   🕐 Hora: ${trip.hour}")
+        android.util.Log.d("TripDetectionViewModel", "   ✅ isAutoDetected: ${trip.isAutoDetected}")
+        android.util.Log.d("TripDetectionViewModel", "   ⏳ isConfirmed: ${trip.isConfirmed}")
+        
         val currentPending = _uiState.value.pendingTrips.toMutableList()
+        android.util.Log.d("TripDetectionViewModel", "   📋 Pendientes actuales: ${currentPending.size}")
+        
         currentPending.add(0, trip) // Agregar al inicio
         _uiState.value = _uiState.value.copy(pendingTrips = currentPending)
-        android.util.Log.d("TripDetectionViewModel", "✅ Trayecto agregado a pendientes. Total pendientes: ${currentPending.size}")
+        
+        android.util.Log.d("TripDetectionViewModel", "✅✅✅ TRAYECTO AGREGADO A PENDIENTES ✅✅✅")
+        android.util.Log.d("TripDetectionViewModel", "   📋 Total pendientes: ${currentPending.size}")
+        android.util.Log.d("TripDetectionViewModel", "   📋 Estado actualizado en UI")
     }
     
     fun confirmTrip(
@@ -150,47 +175,71 @@ class TripDetectionViewModel(application: Application) : AndroidViewModel(applic
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
             try {
-                android.util.Log.d("TripDetectionViewModel", "✅ Confirmando trayecto - Distancia: ${trip.distance} km, Tipo: ${transportType.displayName}")
+                android.util.Log.d("TripDetectionViewModel", "✅ Actualizando tipo de transporte del trayecto")
+                android.util.Log.d("TripDetectionViewModel", "   🆔 Trip ID: ${trip.id}")
+                android.util.Log.d("TripDetectionViewModel", "   📏 Distancia: ${trip.distance} km")
+                android.util.Log.d("TripDetectionViewModel", "   🚗 Tipo: ${transportType.displayName}")
                 
-                // Asegurar que la fecha esté correcta (usar la fecha del startTime del trayecto)
-                val tripDate = trip.date ?: java.text.SimpleDateFormat(
-                    "yyyy-MM-dd",
-                    java.util.Locale.getDefault()
-                ).format(java.util.Date(trip.startTime ?: System.currentTimeMillis()))
-                
-                val confirmedTrip = trip.copy(
-                    userId = userId,
-                    transportType = transportType,
-                    emissionFactor = transportType.emissionFactor,
-                    isConfirmed = true,
-                    date = tripDate, // Asegurar que la fecha esté presente
-                    hour = trip.hour ?: java.text.SimpleDateFormat(
-                        "HH:mm",
-                        java.util.Locale.getDefault()
-                    ).format(java.util.Date(trip.startTime ?: System.currentTimeMillis()))
-                )
-                
-                android.util.Log.d("TripDetectionViewModel", "📤 Guardando trayecto confirmado - Fecha: $tripDate, UserId: $userId")
-                
-                repository.saveAutoDetectedTrip(
-                    confirmedTrip,
-                    onSuccess = {
-                        android.util.Log.d("TripDetectionViewModel", "✅ Trayecto guardado exitosamente en Firestore")
+                // Si el trayecto ya tiene un ID de Firestore, actualizar el registro existente
+                if (trip.id != null) {
+                    android.util.Log.d("TripDetectionViewModel", "   📝 Actualizando registro existente en Firestore")
+                    val success = repository.updateTripTransportType(trip.id!!, transportType)
+                    
+                    if (success) {
+                        android.util.Log.d("TripDetectionViewModel", "✅✅✅ TRAYECTO ACTUALIZADO EXITOSAMENTE ✅✅✅")
                         // Remover de la lista de pendientes
-                        val updatedPending = _uiState.value.pendingTrips.filter { it != trip }
+                        val updatedPending = _uiState.value.pendingTrips.filter { it.id != trip.id }
                         _uiState.value = _uiState.value.copy(
                             pendingTrips = updatedPending,
                             isLoading = false
                         )
-                    },
-                    onError = { error ->
-                        android.util.Log.e("TripDetectionViewModel", "❌ Error al guardar trayecto: $error")
+                    } else {
+                        android.util.Log.e("TripDetectionViewModel", "❌ Error al actualizar trayecto")
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            errorMessage = error
+                            errorMessage = "Error al actualizar el tipo de transporte"
                         )
                     }
-                )
+                } else {
+                    // Si no tiene ID, guardar como nuevo (caso de trayectos pendientes antiguos)
+                    android.util.Log.d("TripDetectionViewModel", "   📝 Guardando como nuevo registro (sin ID)")
+                    val tripDate = trip.date ?: java.text.SimpleDateFormat(
+                        "yyyy-MM-dd",
+                        java.util.Locale.getDefault()
+                    ).format(java.util.Date(trip.startTime ?: System.currentTimeMillis()))
+                    
+                    val confirmedTrip = trip.copy(
+                        userId = userId,
+                        transportType = transportType,
+                        emissionFactor = transportType.emissionFactor,
+                        isConfirmed = true,
+                        date = tripDate,
+                        hour = trip.hour ?: java.text.SimpleDateFormat(
+                            "HH:mm",
+                            java.util.Locale.getDefault()
+                        ).format(java.util.Date(trip.startTime ?: System.currentTimeMillis()))
+                    )
+                    
+                    repository.saveAutoDetectedTrip(
+                        confirmedTrip,
+                        onSuccess = { firestoreId ->
+                            android.util.Log.d("TripDetectionViewModel", "✅ Trayecto guardado exitosamente en Firestore")
+                            android.util.Log.d("TripDetectionViewModel", "   🆔 Firestore ID: $firestoreId")
+                            val updatedPending = _uiState.value.pendingTrips.filter { it != trip }
+                            _uiState.value = _uiState.value.copy(
+                                pendingTrips = updatedPending,
+                                isLoading = false
+                            )
+                        },
+                        onError = { error ->
+                            android.util.Log.e("TripDetectionViewModel", "❌ Error al guardar trayecto: $error")
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                errorMessage = error
+                            )
+                        }
+                    )
+                }
             } catch (e: Exception) {
                 android.util.Log.e("TripDetectionViewModel", "❌ Excepción al confirmar trayecto: ${e.message}", e)
                 _uiState.value = _uiState.value.copy(
