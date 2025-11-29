@@ -126,8 +126,8 @@ fun MapScreen(onBack: () -> Unit, onSignOut: () -> Unit, onTransportSelection: (
                         isMyLocationEnabled = hasLocationPermission
                     ),
                     uiSettings = MapUiSettings(
-                        zoomControlsEnabled = true, 
-                        myLocationButtonEnabled = true,
+                    zoomControlsEnabled = false, 
+                    myLocationButtonEnabled = false,
                         compassEnabled = true,
                         zoomGesturesEnabled = true,
                         scrollGesturesEnabled = true,

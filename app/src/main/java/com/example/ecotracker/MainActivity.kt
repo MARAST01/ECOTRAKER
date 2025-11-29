@@ -29,8 +29,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.LaunchedEffect
 import com.example.ecotracker.ui.viewmodel.LoginViewModel
 import com.example.ecotracker.ui.viewmodel.AuthViewModel
+import com.example.ecotracker.service.TripDetectionService
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
+import android.content.Intent
+import android.content.Context
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,6 +64,41 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val authVm: AuthViewModel = viewModel()
                     val isSignedIn = authVm.state.collectAsState().value.isSignedIn
+                    
+                    // Iniciar servicio de detección automática si el usuario está autenticado
+                    LaunchedEffect(isSignedIn) {
+                        if (isSignedIn) {
+                            val hasLocationPermission = ContextCompat.checkSelfPermission(
+                                this@MainActivity,
+                                Manifest.permission.ACCESS_FINE_LOCATION
+                            ) == PackageManager.PERMISSION_GRANTED ||
+                            ContextCompat.checkSelfPermission(
+                                this@MainActivity,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            ) == PackageManager.PERMISSION_GRANTED
+                            
+                            val hasBackgroundPermission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                                ContextCompat.checkSelfPermission(
+                                    this@MainActivity,
+                                    Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                                ) == PackageManager.PERMISSION_GRANTED
+                            } else {
+                                true // En versiones anteriores a Android 10, se otorga automáticamente
+                            }
+                            
+                            if (hasLocationPermission && hasBackgroundPermission) {
+                                val intent = Intent(this@MainActivity, TripDetectionService::class.java).apply {
+                                    action = TripDetectionService.ACTION_START_TRACKING
+                                }
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                    startForegroundService(intent)
+                                } else {
+                                    startService(intent)
+                                }
+                            }
+                        }
+                    }
+                    
                     NavHost(
                         navController = navController,
                         startDestination = if (isSignedIn) Destinations.Dashboard.route else Destinations.Welcome.route
@@ -103,6 +145,18 @@ class MainActivity : ComponentActivity() {
                                 onProfileClick = { navController.navigate(Destinations.Profile.route) },
                                 onRegistryClick = { navController.navigate(Destinations.Registry.route) },
                                 onFriendshipClick = { navController.navigate(Destinations.Friendship.route) }
+                                onSignOut = {
+                                    // Detener el servicio de detección al cerrar sesión
+                                    val stopIntent = Intent(this@MainActivity, TripDetectionService::class.java).apply {
+                                        action = TripDetectionService.ACTION_STOP_TRACKING
+                                    }
+                                    stopService(stopIntent)
+                                    
+                                    authVm.signOut()
+                                    navController.navigate(Destinations.Welcome.route) {
+                                        popUpTo(Destinations.Dashboard.route) { inclusive = true }
+                                    }
+                                }
                             )
                         }
                         composable(Destinations.Map.route) {
