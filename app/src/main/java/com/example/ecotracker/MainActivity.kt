@@ -144,19 +144,19 @@ class MainActivity : ComponentActivity() {
                             DashboardScreen(
                                 onProfileClick = { navController.navigate(Destinations.Profile.route) },
                                 onRegistryClick = { navController.navigate(Destinations.Registry.route) },
-                                onFriendshipClick = { navController.navigate(Destinations.Friendship.route) }
-                                onSignOut = {
-                                    // Detener el servicio de detección al cerrar sesión
-                                    val stopIntent = Intent(this@MainActivity, TripDetectionService::class.java).apply {
-                                        action = TripDetectionService.ACTION_STOP_TRACKING
-                                    }
-                                    stopService(stopIntent)
+                                onFriendshipClick = { navController.navigate(Destinations.Friendship.route) },
+                                // onSignOut = {
+                                //     // Detener el servicio de detección al cerrar sesión
+                                //     val stopIntent = Intent(this@MainActivity, TripDetectionService::class.java).apply {
+                                //         action = TripDetectionService.ACTION_STOP_TRACKING
+                                //     }
+                                //     stopService(stopIntent)
                                     
-                                    authVm.signOut()
-                                    navController.navigate(Destinations.Welcome.route) {
-                                        popUpTo(Destinations.Dashboard.route) { inclusive = true }
-                                    }
-                                }
+                                //     authVm.signOut()
+                                //     navController.navigate(Destinations.Welcome.route) {
+                                //         popUpTo(Destinations.Dashboard.route) { inclusive = true }
+                                //     }
+                                // }
                             )
                         }
                         composable(Destinations.Map.route) {
