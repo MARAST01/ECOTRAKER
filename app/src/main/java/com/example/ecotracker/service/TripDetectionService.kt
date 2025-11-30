@@ -50,8 +50,7 @@ class TripDetectionService : Service() {
     private var isTracking = false
     private var stationaryStartTime: Long? = null
     private var lastMovingLocation: Location? = null // Última ubicación cuando había movimiento
-    private var isEndingTrip = false // Flag para evitar múltiples llamadas simultáneas a endTrip()
-    private val STATIONARY_THRESHOLD_MS = 240000L // 4 minutos sin movimiento (240 segundos)
+    private val STATIONARY_THRESHOLD_MS = 5000L // 5 segundos sin movimiento (entorno de pruebas)
     private val MIN_DISTANCE_METERS = 10.0 // Mínimo 10 metros para considerar un trayecto (reducido para detectar trayectos cortos a pie)
     private val MOVEMENT_SPEED_THRESHOLD_WALKING = 0.3 // m/s (1.08 km/h) - para caminar (reducido para ser más sensible)
     private val MOVEMENT_SPEED_THRESHOLD_VEHICLE = 2.0 // m/s (7.2 km/h) - para vehículos
@@ -247,6 +246,105 @@ class TripDetectionService : Service() {
             speed = location.speed
         )
         currentTrip.add(point)
+    }
+    
+    private fun endTrip() {
+        Log.d("TripDetection", "🏁 Finalizando trayecto - Puntos: ${currentTrip.size}, StartTime: $tripStartTime")
+        
+        if (currentTrip.size < 2 || tripStartTime == null) {
+            Log.w("TripDetection", "⚠️ Trayecto descartado - Muy pocos puntos (${currentTrip.size}) o sin startTime")
+            resetTrip()
+            return
+        }
+        
+        val totalDistance = calculateTotalDistance(currentTrip)
+        Log.d("TripDetection", "📏 Distancia total calculada: ${String.format("%.2f", totalDistance)}m")
+        
+        // Solo crear trayecto si la distancia es significativa
+        if (totalDistance < MIN_DISTANCE_METERS) {
+            Log.w("TripDetection", "⚠️ Trayecto descartado - Distancia insuficiente: ${String.format("%.2f", totalDistance)}m (mínimo: ${MIN_DISTANCE_METERS}m)")
+            resetTrip()
+            return
+        }
+        
+        val endTime = System.currentTimeMillis()
+        val duration = endTime - tripStartTime!!
+        val averageSpeed = if (duration > 0) {
+            (totalDistance / duration) * 3.6 // Convertir m/ms a km/h
+        } else 0.0
+        
+        val trip = TransportRecord(
+            userId = null, // Se asignará cuando se confirme
+            transportType = null, // Pendiente de confirmación
+            date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                .format(java.util.Date(tripStartTime!!)),
+            timestamp = tripStartTime,
+            hour = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+                .format(java.util.Date(tripStartTime!!)),
+            distance = totalDistance / 1000.0, // Convertir a kilómetros
+            startTime = tripStartTime,
+            endTime = endTime,
+            duration = duration,
+            averageSpeed = averageSpeed,
+            routePoints = currentTrip.toList(),
+            startLocation = currentTrip.firstOrNull(),
+            endLocation = currentTrip.lastOrNull(),
+            isAutoDetected = true,
+            isConfirmed = false,
+            createdAt = System.currentTimeMillis()
+        )
+        
+        val tripDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+            .format(java.util.Date(tripStartTime!!))
+        
+        Log.d("TripDetection", "✅✅✅ TRAYECTO FINALIZADO ✅✅✅")
+        Log.d("TripDetection", "   📏 Distancia: ${String.format("%.2f", totalDistance / 1000.0)} km")
+        Log.d("TripDetection", "   ⏱️ Duración: ${duration / 60000} min (${duration / 1000} seg)")
+        Log.d("TripDetection", "   📍 Puntos GPS: ${currentTrip.size}")
+        Log.d("TripDetection", "   📅 Fecha: $tripDate")
+        Log.d("TripDetection", "   🚗 Velocidad promedio: ${String.format("%.2f", averageSpeed)} km/h")
+        Log.d("TripDetection", "   🆔 ID: ${trip.id}")
+        Log.d("TripDetection", "📤 Enviando broadcast de trayecto detectado...")
+        
+        // Notificar el trayecto detectado
+        notifyTripDetected(trip)
+        
+        Log.d("TripDetection", "✅ Broadcast enviado. Trayecto debería aparecer en la app.")
+        
+        resetTrip()
+    }
+    
+    private fun calculateTotalDistance(points: List<LocationPoint>): Double {
+        if (points.size < 2) return 0.0
+        
+        var totalDistance = 0.0
+        for (i in 1 until points.size) {
+            val prev = points[i - 1]
+            val curr = points[i]
+            totalDistance += calculateDistance(
+                prev.latitude, prev.longitude,
+                curr.latitude, curr.longitude
+            )
+        }
+        return totalDistance
+    }
+    
+    private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val results = FloatArray(1)
+        Location.distanceBetween(lat1, lon1, lat2, lon2, results)
+        return results[0].toDouble()
+    }
+    
+    private fun resetTrip() {
+        Log.d(
+            "TripDetection",
+            "🔁 Reset trip - puntos previos: ${currentTrip.size}, estabaTracking=$isTracking, tripStartTime=$tripStartTime"
+        )
+        isTracking = false
+        tripStartTime = null
+        currentTrip.clear()
+        stationaryStartTime = null
+        lastMovingLocation = null
     }
     
     private fun switchToHighFrequencyTracking() {
