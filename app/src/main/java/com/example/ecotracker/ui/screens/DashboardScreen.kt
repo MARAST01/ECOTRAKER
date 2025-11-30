@@ -159,6 +159,7 @@ fun SpeedIndicator(
 fun DashboardScreen(
     onProfileClick: () -> Unit,
     onRegistryClick: () -> Unit,
+    onSignOut: () -> Unit,
     onFriendshipClick: () -> Unit
 ) {
     val context = LocalContext.current

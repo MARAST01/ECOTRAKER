@@ -155,7 +155,7 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate(Destinations.Welcome.route) {
                                         popUpTo(Destinations.Dashboard.route) { inclusive = true }
                                     }
-                                }
+                                },
                                 onFriendshipClick = { navController.navigate(Destinations.Friendship.route) }
                             )
                         }
