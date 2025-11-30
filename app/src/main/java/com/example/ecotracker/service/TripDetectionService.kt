@@ -28,6 +28,7 @@ import kotlinx.coroutines.*
 import kotlin.math.abs
 import com.example.ecotracker.service.TripDetectionReceiver
 
+
 class TripDetectionService : Service() {
 
     // ────────────────────────────────────────────────────────────────────────────
@@ -381,6 +382,13 @@ class TripDetectionService : Service() {
                     gpsSpeed > 55.5 -> calculatedSpeed
                     else -> if (gpsSpeed > 0) gpsSpeed else calculatedSpeed
                 }
+
+                val speedIntent = Intent(TripDetectionReceiver.ACTION_SPEED_UPDATE).apply {
+                    putExtra(TripDetectionReceiver.EXTRA_SPEED, reportedSpeed.toFloat())
+                    putExtra(TripDetectionReceiver.EXTRA_IS_TRACKING, isTracking)
+                    setPackage(packageName)
+                }
+                sendBroadcast(speedIntent)
 
                 val isMoving = reportedSpeed >= MOVEMENT_SPEED_THRESHOLD_WALKING ||
                         distance >= MOVEMENT_DISTANCE_THRESHOLD
