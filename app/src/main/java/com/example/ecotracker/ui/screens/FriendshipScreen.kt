@@ -519,10 +519,22 @@ private fun SentRequestsList(
                         )
                     }
                     Spacer(Modifier.height(8.dp))
+                    val status = FriendshipStatus.fromString(request.status)
+                    val statusText = when (status) {
+                        FriendshipStatus.PENDING -> "Estado: Pendiente"
+                        FriendshipStatus.REJECTED -> "Estado: Rechazada"
+                        FriendshipStatus.ACCEPTED -> "Estado: Aceptada"
+                    }
+                    val statusColor = when (status) {
+                        FriendshipStatus.PENDING -> MaterialTheme.colorScheme.primary
+                        FriendshipStatus.REJECTED -> MaterialTheme.colorScheme.error
+                        FriendshipStatus.ACCEPTED -> MaterialTheme.colorScheme.tertiary
+                    }
                     Text(
-                        text = "Estado: Pendiente",
+                        text = statusText,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = statusColor,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
