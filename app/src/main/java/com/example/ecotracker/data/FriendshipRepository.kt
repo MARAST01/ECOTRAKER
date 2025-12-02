@@ -177,6 +177,27 @@ class FriendshipRepository {
     }
     
     /**
+     * Elimina una amistad (borra el documento de la base de datos).
+     * 
+     * @param friendshipId ID del documento de la amistad
+     * @return Result indicando éxito o error
+     */
+    suspend fun deleteFriendship(friendshipId: String): Result<Unit> {
+        return try {
+            db.collection(friendshipsCollection)
+                .document(friendshipId)
+                .delete()
+                .await()
+            
+            Log.d("FriendshipRepository", "✅ Amistad eliminada: $friendshipId")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("FriendshipRepository", "❌ Error al eliminar amistad: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+    
+    /**
      * Obtiene todas las solicitudes recibidas pendientes de un usuario.
      * 
      * @param userId ID del usuario
