@@ -65,6 +65,10 @@ class TripDetectionViewModel(application: Application) : AndroidViewModel(applic
                 TripDetectionReceiver.ACTION_SPEED_UPDATE -> {
                     val speed = intent.getFloatExtra(TripDetectionReceiver.EXTRA_SPEED, 0f)
                     val isTracking = intent.getBooleanExtra(TripDetectionReceiver.EXTRA_IS_TRACKING, false)
+                    android.util.Log.d(
+                        "TripDetectionViewModel",
+                        "⚡ ACTION_SPEED_UPDATE - Velocidad: ${String.format("%.2f", speed * 3.6f)} km/h, isTracking=$isTracking"
+                    )
                     _uiState.value = _uiState.value.copy(
                         currentSpeed = speed,
                         isTracking = isTracking

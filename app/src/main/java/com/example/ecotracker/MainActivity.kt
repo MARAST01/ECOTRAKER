@@ -22,6 +22,8 @@ import com.example.ecotracker.ui.screens.MapScreen
 import com.example.ecotracker.ui.screens.LoginScreen
 import com.example.ecotracker.ui.screens.TransportSelectionScreen
 import com.example.ecotracker.ui.screens.RegistryScreen
+import com.example.ecotracker.ui.screens.ProfileScreen
+import com.example.ecotracker.ui.screens.FriendshipScreen
 import com.example.ecotracker.ui.components.BottomNavigationBar
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.LaunchedEffect
@@ -140,7 +142,7 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(Destinations.Dashboard.route) {
                             DashboardScreen(
-                                onTransportClick = { navController.navigate(Destinations.TransportSelection.route) },
+                                onProfileClick = { navController.navigate(Destinations.Profile.route) },
                                 onRegistryClick = { navController.navigate(Destinations.Registry.route) },
                                 onSignOut = {
                                     // Detener el servicio de detección al cerrar sesión
@@ -153,7 +155,8 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate(Destinations.Welcome.route) {
                                         popUpTo(Destinations.Dashboard.route) { inclusive = true }
                                     }
-                                }
+                                },
+                                onFriendshipClick = { navController.navigate(Destinations.Friendship.route) }
                             )
                         }
                         composable(Destinations.Map.route) {
@@ -175,6 +178,22 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(Destinations.TransportSelection.route) {
                             TransportSelectionScreen(
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                        composable(Destinations.Profile.route) {
+                            ProfileScreen(
+                                onBack = { navController.popBackStack() },
+                                onSignedOut = {
+                                    authVm.signOut()
+                                    navController.navigate(Destinations.Welcome.route) {
+                                        popUpTo(Destinations.Dashboard.route) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+                        composable(Destinations.Friendship.route) {
+                            FriendshipScreen(
                                 onBack = { navController.popBackStack() }
                             )
                         }

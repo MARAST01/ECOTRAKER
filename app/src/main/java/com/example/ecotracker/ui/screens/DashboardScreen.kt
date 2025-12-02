@@ -157,9 +157,10 @@ fun SpeedIndicator(
 
 @Composable
 fun DashboardScreen(
-    onTransportClick: () -> Unit,
+    onProfileClick: () -> Unit,
     onRegistryClick: () -> Unit,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
+    onFriendshipClick: () -> Unit
 ) {
     val context = LocalContext.current
     var hasLocationPermission by remember { mutableStateOf(false) }
@@ -540,9 +541,9 @@ fun DashboardScreen(
             
             // Barra de navegación inferior
             BottomNavigationBar(
-                onTransportClick = onTransportClick,
+                onProfileClick = onProfileClick,
                 onRegistryClick = onRegistryClick,
-                onSignOut = onSignOut
+                onFriendshipClick = onFriendshipClick
             )
         }
         

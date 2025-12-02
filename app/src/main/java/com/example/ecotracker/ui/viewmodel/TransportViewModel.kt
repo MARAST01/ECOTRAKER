@@ -17,6 +17,7 @@ data class TransportUiState(
     val distance: String = "",
     val todayRecord: TransportRecord? = null,
     val todayRecords: List<TransportRecord> = emptyList(),
+    val todayEmissionsKg: Double = 0.0,
     val allRecords: List<TransportRecord> = emptyList(),
     val paginatedRecords: List<TransportRecord> = emptyList(),
     val currentDaysBack: Int = 15,
@@ -48,36 +49,37 @@ class TransportViewModel : ViewModel() {
     }
 
     fun saveTransportRecord(userId: String) {
-        val currentState = _uiState.value
-        val selectedTransport = currentState.selectedTransport
-        val selectedTime = currentState.selectedTime
-        val distanceText = currentState.distance
+        val state = _uiState.value
+        val type = state.selectedTransport
+        val time = state.selectedTime
+        val distanceText = state.distance
 
-        if (selectedTransport == null) {
-            _uiState.value = currentState.copy(errorMessage = "Selecciona un medio de transporte.")
+        if (type == null) {
+            _uiState.value = state.copy(errorMessage = "Selecciona un medio de transporte.")
             return
         }
 
-        if (selectedTime.isEmpty()) {
-            _uiState.value = currentState.copy(errorMessage = "Selecciona una hora válida.")
+        if (time.isEmpty()) {
+            _uiState.value = state.copy(errorMessage = "Selecciona una hora válida.")
             return
         }
 
         val distanceKm = distanceText.toDoubleOrNull()
         if (distanceKm == null || distanceKm <= 0.0) {
-            _uiState.value = currentState.copy(errorMessage = "Ingresa una distancia válida mayor a 0.")
+            _uiState.value = state.copy(errorMessage = "Ingresa una distancia válida mayor a 0.")
             return
         }
 
-        _uiState.value = currentState.copy(isLoading = true, errorMessage = null)
+        _uiState.value = state.copy(isLoading = true, errorMessage = null)
 
         viewModelScope.launch {
             repository.saveTransportRecord(
                 userId = userId,
-                transportType = selectedTransport,
-                hour = selectedTime,
+                transportType = type,
+                hour = time,
                 distance = distanceKm,
                 onSuccess = {
+                    // Clear UI inputs
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         showSuccessSnackbar = true,
@@ -100,13 +102,15 @@ class TransportViewModel : ViewModel() {
     fun loadTodayRecord(userId: String) {
         viewModelScope.launch {
             try {
-                val allRecords = repository.getAllUserTransportRecords(userId)
                 val todayRecord = repository.getTodayTransportRecord(userId)
                 val todayRecords = repository.getTodayTransportRecords(userId)
+                val allRecords = repository.getAllUserTransportRecords(userId)
+                val emissionsKg = repository.getTodayEmissionsKg(userId)
 
                 _uiState.value = _uiState.value.copy(
                     todayRecord = todayRecord,
                     todayRecords = todayRecords,
+                    todayEmissionsKg = emissionsKg,
                     allRecords = allRecords
                 )
             } catch (e: Exception) {
@@ -134,6 +138,7 @@ class TransportViewModel : ViewModel() {
             try {
                 _uiState.value = _uiState.value.copy(isLoadingMore = true)
                 val records = repository.getUserTransportRecordsPaginated(userId, daysBack)
+
                 _uiState.value = _uiState.value.copy(
                     paginatedRecords = records,
                     currentDaysBack = daysBack,
