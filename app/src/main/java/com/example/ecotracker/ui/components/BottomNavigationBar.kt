@@ -3,6 +3,7 @@ package com.example.ecotracker.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -38,6 +39,7 @@ fun BottomNavigationBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
@@ -45,7 +47,7 @@ fun BottomNavigationBar(
             // Botón de Perfil
             Button(
                 onClick = onProfileClick,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                 modifier = Modifier
                     .weight(1f)
                     .focusRequester(profileFocus)
@@ -60,7 +62,7 @@ fun BottomNavigationBar(
             ) {
                 Text(
                     text = "Perfil",
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    color = MaterialTheme.colorScheme.onSecondary,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1
                 )
@@ -93,7 +95,7 @@ fun BottomNavigationBar(
             // Botón de Amistades
             Button(
                 onClick = onFriendshipClick,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                 modifier = Modifier
                     .weight(1f)
                     .focusRequester(friendshipFocus)
@@ -108,7 +110,7 @@ fun BottomNavigationBar(
             ) {
                 Text(
                     text = "Amistades",
-                    color = MaterialTheme.colorScheme.onTertiary,
+                    color = MaterialTheme.colorScheme.onSecondary,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1
                 )

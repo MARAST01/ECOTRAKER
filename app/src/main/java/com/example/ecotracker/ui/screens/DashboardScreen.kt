@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -558,7 +559,8 @@ fun DashboardScreen(
                 isTracking = tripDetectionState.isTracking,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = 16.dp, bottom = 80.dp) // Más arriba para no sobreponerse con la barra
+                    .navigationBarsPadding()
+                    .padding(start = 16.dp, bottom = 80.dp) // Más arriba para no sobreponerse con la barra de navegación de la app
             )
         }
 
