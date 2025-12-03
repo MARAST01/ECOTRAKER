@@ -39,6 +39,7 @@ data class TransportRecord(
     @get:PropertyName("confirmed")
     @set:PropertyName("confirmed")
     var isConfirmed: Boolean = false,
+    var pointsAwarded: Long? = null,
     var startTime: Long? = null,
     var endTime: Long? = null,
     var duration: Long? = null, // Duración en milisegundos

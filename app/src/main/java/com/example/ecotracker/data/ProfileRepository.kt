@@ -4,6 +4,8 @@ import android.util.Log
 import com.example.ecotracker.data.model.UserProfile
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 class ProfileRepository(
@@ -17,10 +19,24 @@ class ProfileRepository(
         val userUid = auth.currentUser?.uid ?: return null
         return try {
             val snapshot = firestore.collection(usersCollection).document(userUid).get().await()
-            snapshot.toObject(UserProfile::class.java)?.apply { uid = userUid }
+            val profile = snapshot.toObject(UserProfile::class.java) ?: UserProfile()
+            profile.uid = userUid
+            // Forzar 0 si no existe en documento
+            profile.greenPoints = snapshot.getLong("greenPoints") ?: 0L
+            profile
         } catch (e: Exception) {
             Log.e("ProfileRepository", "Error getting profile: ${e.message}", e)
             null
+        }
+    }
+
+    suspend fun getUserGreenPoints(userId: String): Long {
+        return try {
+            val doc = firestore.collection(usersCollection).document(userId).get().await()
+            doc.getLong("greenPoints") ?: 0L
+        } catch (e: Exception) {
+            Log.e("ProfileRepository", "Error getting points: ${e.message}", e)
+            0L
         }
     }
 
@@ -48,6 +64,19 @@ class ProfileRepository(
             Log.e("ProfileRepository", "Error updating profile: ${e.message}", e)
             Result.failure(e)
         }
+    }
+
+    fun listenToUserProfile(userId: String, onData: (UserProfile?) -> Unit) {
+        firestore.collection("users")
+            .document(userId)
+            .addSnapshotListener { snapshot, _ ->
+                if (snapshot != null && snapshot.exists()) {
+                    val profile = snapshot.toObject(UserProfile::class.java)
+                    onData(profile)
+                } else {
+                    onData(null)
+                }
+            }
     }
 
     fun signOut() {

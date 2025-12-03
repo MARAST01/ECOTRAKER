@@ -42,6 +42,11 @@ class TransportRepository {
                 .add(record)
                 .await()
 
+            val points = PointRules.pointsForTransport(transportType)
+            if (points > 0) {
+                awardPointsForTransport(userId, points)
+            }
+
             onSuccess()
         } catch (e: Exception) {
             onError("Error al guardar el registro: ${e.message}")
@@ -314,5 +319,19 @@ class TransportRepository {
             0.0
         }
     }
+
+    suspend fun awardPointsForTransport(userId: String, points: Int) {
+        val userDoc = db.collection("users").document(userId)
+
+        db.runTransaction { tx ->
+            val snapshot = tx.get(userDoc)
+
+            val currentPoints = snapshot.getLong("greenPoints") ?: 0L
+            val newTotal = currentPoints + points
+
+            tx.update(userDoc, "greenPoints", newTotal)
+        }.await()
+    }
+
 
 }
