@@ -19,8 +19,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -243,6 +245,9 @@ fun FriendshipScreen(
                         FriendsList(
                             friendships = uiState.acceptedFriendships,
                             currentUserId = currentUserId,
+                            onDeleteFriend = { friendshipId ->
+                                viewModel.deleteFriendship(friendshipId, currentUserId)
+                            },
                             viewModel = viewModel
                         )
                     }
@@ -519,10 +524,22 @@ private fun SentRequestsList(
                         )
                     }
                     Spacer(Modifier.height(8.dp))
+                    val status = FriendshipStatus.fromString(request.status)
+                    val statusText = when (status) {
+                        FriendshipStatus.PENDING -> "Estado: Pendiente"
+                        FriendshipStatus.REJECTED -> "Estado: Rechazada"
+                        FriendshipStatus.ACCEPTED -> "Estado: Aceptada"
+                    }
+                    val statusColor = when (status) {
+                        FriendshipStatus.PENDING -> MaterialTheme.colorScheme.primary
+                        FriendshipStatus.REJECTED -> MaterialTheme.colorScheme.error
+                        FriendshipStatus.ACCEPTED -> MaterialTheme.colorScheme.tertiary
+                    }
                     Text(
-                        text = "Estado: Pendiente",
+                        text = statusText,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = statusColor,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
@@ -534,8 +551,11 @@ private fun SentRequestsList(
 private fun FriendsList(
     friendships: List<FriendshipRequest>,
     currentUserId: String,
+    onDeleteFriend: (String) -> Unit,
     viewModel: FriendshipViewModel
 ) {
+    var showDeleteDialog by remember { mutableStateOf<FriendshipRequest?>(null) }
+    
     if (friendships.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -586,7 +606,11 @@ private fun FriendsList(
             }
             
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        showDeleteDialog = friendship
+                    },
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
@@ -631,6 +655,65 @@ private fun FriendsList(
                 }
             }
         }
+    }
+    
+    // Diálogo de confirmación para eliminar amigo
+    showDeleteDialog?.let { friendship ->
+        val friendId = if (friendship.requesterId == currentUserId) {
+            friendship.receiverId
+        } else {
+            friendship.requesterId
+        }
+        
+        var dialogFriendProfile by remember { mutableStateOf<UserProfile?>(null) }
+        val coroutineScope = rememberCoroutineScope()
+        
+        LaunchedEffect(friendId) {
+            friendId?.let { userId ->
+                coroutineScope.launch {
+                    dialogFriendProfile = viewModel.getUserProfile(userId)
+                }
+            }
+        }
+        
+        val friendName = dialogFriendProfile?.fullName ?: dialogFriendProfile?.email ?: "este amigo"
+        
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = null },
+            icon = {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = {
+                Text("Eliminar amigo")
+            },
+            text = {
+                Text("¿Estás seguro de que deseas eliminar a $friendName de tu lista de amigos?")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        friendship.id?.let { id ->
+                            onDeleteFriend(id)
+                        }
+                        showDeleteDialog = null
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
 

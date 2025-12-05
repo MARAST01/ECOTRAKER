@@ -149,6 +149,35 @@ class FriendshipViewModel(
     }
     
     /**
+     * Elimina una amistad
+     */
+    fun deleteFriendship(friendshipId: String, userId: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            try {
+                val result = repository.deleteFriendship(friendshipId)
+                result.fold(
+                    onSuccess = {
+                        // Recargar amistades
+                        loadFriendships(userId)
+                    },
+                    onFailure = { error ->
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            error = error.message ?: "Error al eliminar amistad"
+                        )
+                    }
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = "Error al eliminar amistad: ${e.message}"
+                )
+            }
+        }
+    }
+    
+    /**
      * Busca usuarios
      */
     fun searchUsers(query: String, currentUserId: String) {

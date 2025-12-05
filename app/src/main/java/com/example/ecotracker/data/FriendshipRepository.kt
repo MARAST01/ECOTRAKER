@@ -79,14 +79,34 @@ class FriendshipRepository {
      */
     suspend fun sendFriendshipRequest(requesterId: String, receiverId: String): Result<String> {
         return try {
-            // Verificar que no exista ya una solicitud
+            // Verificar que no exista ya una solicitud pendiente o aceptada
             val existing = getFriendshipStatus(requesterId, receiverId)
             if (existing != null) {
-                return Result.failure(Exception("Ya existe una solicitud entre estos usuarios"))
+                Log.d("FriendshipRepository", "🔍 Solicitud existente encontrada: ID=${existing.id}, Status=${existing.status}, Requester=${existing.requesterId}, Receiver=${existing.receiverId}")
+                // Solo rechazar si la solicitud está pendiente o aceptada
+                // Permitir crear nueva solicitud si la anterior fue rechazada
+                val status = FriendshipStatus.fromString(existing.status)
+                if (status == FriendshipStatus.PENDING || status == FriendshipStatus.ACCEPTED) {
+                    Log.d("FriendshipRepository", "⚠️ Solicitud ${status.value} ya existe, rechazando nueva solicitud")
+                    return Result.failure(Exception("Ya existe una solicitud entre estos usuarios"))
+                }
+                // Si la solicitud anterior fue rechazada, podemos crear una nueva
+                // pero primero eliminamos la anterior para mantener la base de datos limpia
+                if (existing.id != null) {
+                    db.collection(friendshipsCollection).document(existing.id!!).delete().await()
+                    Log.d("FriendshipRepository", "🗑️ Solicitud rechazada anterior eliminada: ${existing.id}")
+                } else {
+                    Log.w("FriendshipRepository", "⚠️ Solicitud rechazada encontrada pero sin ID, no se puede eliminar")
+                }
             }
             
             val now = System.currentTimeMillis()
+            Log.d("FriendshipRepository", "📤 Creando nueva solicitud: Requester=$requesterId, Receiver=$receiverId")
+            
+            // Crear referencia de documento primero para obtener el ID
+            val docRef = db.collection(friendshipsCollection).document()
             val friendship = FriendshipRequest(
+                id = docRef.id, // Asignar el ID antes de guardar
                 requesterId = requesterId,
                 receiverId = receiverId,
                 status = FriendshipStatus.PENDING.value,
@@ -94,8 +114,9 @@ class FriendshipRepository {
                 updatedAt = now
             )
             
-            val docRef = db.collection(friendshipsCollection).add(friendship).await()
-            Log.d("FriendshipRepository", "✅ Solicitud de amistad creada: ${docRef.id}")
+            // Guardar el documento con el ID incluido
+            docRef.set(friendship).await()
+            Log.d("FriendshipRepository", "✅ Solicitud de amistad creada: ID=${docRef.id}, Requester=$requesterId, Receiver=$receiverId, Status=${friendship.status}")
             Result.success(docRef.id)
         } catch (e: Exception) {
             Log.e("FriendshipRepository", "❌ Error al enviar solicitud: ${e.message}", e)
@@ -156,6 +177,27 @@ class FriendshipRepository {
     }
     
     /**
+     * Elimina una amistad (borra el documento de la base de datos).
+     * 
+     * @param friendshipId ID del documento de la amistad
+     * @return Result indicando éxito o error
+     */
+    suspend fun deleteFriendship(friendshipId: String): Result<Unit> {
+        return try {
+            db.collection(friendshipsCollection)
+                .document(friendshipId)
+                .delete()
+                .await()
+            
+            Log.d("FriendshipRepository", "✅ Amistad eliminada: $friendshipId")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("FriendshipRepository", "❌ Error al eliminar amistad: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+    
+    /**
      * Obtiene todas las solicitudes recibidas pendientes de un usuario.
      * 
      * @param userId ID del usuario
@@ -163,46 +205,94 @@ class FriendshipRepository {
      */
     suspend fun getPendingRequests(userId: String): List<FriendshipRequest> {
         return try {
+            Log.d("FriendshipRepository", "🔍 Obteniendo solicitudes pendientes recibidas para usuario: $userId")
+            
+            // Obtener todas las solicitudes donde el usuario es el receiver
+            // No filtramos por status aquí porque puede haber inconsistencias de mayúsculas/minúsculas
             val result = db.collection(friendshipsCollection)
                 .whereEqualTo("receiverId", userId)
-                .whereEqualTo("status", FriendshipStatus.PENDING.value)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
                 .await()
             
-            result.documents.mapNotNull { doc ->
+            Log.d("FriendshipRepository", "📋 Total documentos encontrados (receiverId=$userId): ${result.documents.size}")
+            
+            // Filtrar localmente por status pendiente (normalizando a minúsculas para comparar)
+            val requests = result.documents.mapNotNull { doc ->
                 val friendship = doc.toObject(FriendshipRequest::class.java)
                 friendship?.id = doc.id
-                friendship
-            }
+                
+                // Normalizar el status a minúsculas para comparar
+                val normalizedStatus = friendship?.status?.lowercase()
+                val isPending = normalizedStatus == FriendshipStatus.PENDING.value.lowercase()
+                
+                Log.d("FriendshipRepository", "📄 Solicitud encontrada: ID=${friendship?.id}, Requester=${friendship?.requesterId}, Receiver=${friendship?.receiverId}, Status=${friendship?.status} (normalized=$normalizedStatus, isPending=$isPending)")
+                
+                // Solo incluir si es pendiente (comparando en minúsculas)
+                if (isPending) {
+                    // Normalizar el status en el objeto para consistencia
+                    friendship.status = FriendshipStatus.PENDING.value
+                    friendship
+                } else {
+                    null
+                }
+            }.sortedByDescending { it.createdAt ?: 0L }
+            
+            Log.d("FriendshipRepository", "✅ Solicitudes pendientes recibidas ordenadas: ${requests.size}")
+            
+            return requests
         } catch (e: Exception) {
             Log.e("FriendshipRepository", "❌ Error al obtener solicitudes pendientes: ${e.message}", e)
+            e.printStackTrace()
             emptyList()
         }
     }
     
     /**
-     * Obtiene todas las solicitudes enviadas pendientes de un usuario.
+     * Obtiene todas las solicitudes enviadas de un usuario (pendientes y rechazadas).
+     * No incluye solicitudes aceptadas porque esas ya están en la lista de amigos.
      * 
      * @param userId ID del usuario
-     * @return Lista de solicitudes pendientes
+     * @return Lista de solicitudes enviadas (pendientes y rechazadas)
      */
     suspend fun getSentRequests(userId: String): List<FriendshipRequest> {
         return try {
-            val result = db.collection(friendshipsCollection)
+            Log.d("FriendshipRepository", "🔍 Obteniendo solicitudes enviadas para usuario: $userId")
+            
+            // Query simplificada sin orderBy para evitar necesidad de índice compuesto
+            // Obtener todas las solicitudes donde el usuario es el requester
+            val allSentResult = db.collection(friendshipsCollection)
                 .whereEqualTo("requesterId", userId)
-                .whereEqualTo("status", FriendshipStatus.PENDING.value)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
                 .await()
             
-            result.documents.mapNotNull { doc ->
+            Log.d("FriendshipRepository", "📋 Total documentos encontrados: ${allSentResult.documents.size}")
+            
+            // Filtrar solo pendientes y rechazadas, excluyendo aceptadas
+            val filteredRequests = allSentResult.documents.mapNotNull { doc ->
                 val friendship = doc.toObject(FriendshipRequest::class.java)
                 friendship?.id = doc.id
-                friendship
+                val status = FriendshipStatus.fromString(friendship?.status)
+                
+                Log.d("FriendshipRepository", "📄 Solicitud encontrada: ID=${friendship?.id}, Status=$status, Receiver=${friendship?.receiverId}")
+                
+                // Solo incluir si es pendiente o rechazada
+                if (status == FriendshipStatus.PENDING || status == FriendshipStatus.REJECTED) {
+                    friendship
+                } else {
+                    null
+                }
             }
+            
+            Log.d("FriendshipRepository", "✅ Solicitudes filtradas (pendientes + rechazadas): ${filteredRequests.size}")
+            
+            // Ordenar localmente por fecha de creación (más recientes primero)
+            val sortedRequests = filteredRequests.sortedByDescending { it.createdAt ?: 0L }
+            Log.d("FriendshipRepository", "✅ Solicitudes ordenadas: ${sortedRequests.size}")
+            
+            return sortedRequests
         } catch (e: Exception) {
             Log.e("FriendshipRepository", "❌ Error al obtener solicitudes enviadas: ${e.message}", e)
+            e.printStackTrace()
             emptyList()
         }
     }
@@ -259,7 +349,10 @@ class FriendshipRepository {
     suspend fun getUserProfile(userId: String): UserProfile? {
         return try {
             val doc = db.collection(usersCollection).document(userId).get().await()
-            doc.toObject(UserProfile::class.java)
+            val profile = doc.toObject(UserProfile::class.java)
+            // Asegurar que el uid esté asignado desde el ID del documento
+            profile?.uid = doc.id
+            profile
         } catch (e: Exception) {
             Log.e("FriendshipRepository", "❌ Error al obtener perfil: ${e.message}", e)
             null
@@ -275,6 +368,7 @@ class FriendshipRepository {
      */
     suspend fun searchUsers(query: String, currentUserId: String): List<UserProfile> {
         return try {
+            Log.d("FriendshipRepository", "🔍 Buscando usuarios con query: $query")
             // Firestore no soporta búsqueda de texto completo, así que buscamos por email
             // En una implementación real, podrías usar Algolia o Cloud Functions
             val result = db.collection(usersCollection)
@@ -284,10 +378,20 @@ class FriendshipRepository {
                 .get()
                 .await()
             
+            Log.d("FriendshipRepository", "📋 Usuarios encontrados: ${result.documents.size}")
+            
             result.documents.mapNotNull { doc ->
                 val profile = doc.toObject(UserProfile::class.java)
+                // Asignar el uid desde el ID del documento (importante!)
+                profile?.uid = doc.id
+                Log.d("FriendshipRepository", "👤 Usuario encontrado: UID=${doc.id}, Email=${profile?.email}, FullName=${profile?.fullName}")
                 // Excluir al usuario actual
-                if (profile?.uid != currentUserId) profile else null
+                if (profile?.uid != currentUserId) {
+                    profile
+                } else {
+                    Log.d("FriendshipRepository", "⏭️ Excluyendo usuario actual: ${doc.id}")
+                    null
+                }
             }
         } catch (e: Exception) {
             Log.e("FriendshipRepository", "❌ Error al buscar usuarios: ${e.message}", e)
