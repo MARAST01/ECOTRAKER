@@ -12,6 +12,7 @@ data class ProfileUiState(
     val fullName: String = "",
     val email: String = "",
     val isLoading: Boolean = false,
+    val greenPoints: Long = 0L,
     val successMessage: String? = null,
     val errorMessage: String? = null
 )
@@ -25,7 +26,13 @@ class ProfileViewModel(
 
     init {
         loadProfile()
+
+        val userId = repository.auth.currentUser?.uid
+        if (userId != null) {
+            listenToGreenPoints(userId)
+        }
     }
+
 
     fun loadProfile() {
         viewModelScope.launch {
@@ -35,6 +42,7 @@ class ProfileViewModel(
                 _uiState.value = ProfileUiState(
                     fullName = profile.fullName.orEmpty(),
                     email = profile.email.orEmpty(),
+                    greenPoints = profile.greenPoints,
                     isLoading = false
                 )
             } else {
@@ -45,6 +53,15 @@ class ProfileViewModel(
             }
         }
     }
+
+    fun listenToGreenPoints(userId: String) {
+        repository.listenToUserProfile(userId) { profile ->
+            profile?.let {
+                _uiState.value = _uiState.value.copy(greenPoints = it.greenPoints)
+            }
+        }
+    }
+
 
     fun onNameChange(value: String) {
         _uiState.value = _uiState.value.copy(fullName = value, successMessage = null, errorMessage = null)

@@ -9,8 +9,9 @@ data class UserProfile(
     var fullName: String? = null,
     var phone: String? = null,
     var email: String? = null,
-    var createdAt: Long? = null
+    var createdAt: Long? = null,
+    var greenPoints: Long = 0L
 ) {
     // Explicit no-arg constructor for Firestore (even though defaults exist)
-    constructor() : this(null, null, null, null, null)
+    constructor() : this(null, null, null, null, null, 0L)
 }
