@@ -27,7 +27,7 @@ class ProfileViewModel(
     init {
         loadProfile()
 
-        val userId = repository.auth.currentUser?.uid
+        val userId = repository.getCurrentUserId()
         if (userId != null) {
             listenToGreenPoints(userId)
         }

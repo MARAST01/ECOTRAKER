@@ -79,6 +79,10 @@ class ProfileRepository(
             }
     }
 
+    fun getCurrentUserId(): String? {
+        return auth.currentUser?.uid
+    }
+
     fun signOut() {
         auth.signOut()
     }
